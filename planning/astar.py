@@ -1,3 +1,4 @@
+from ..forward import Node, Graph
 
 def ComputePath(OPEN, s_goal):
 	path = []
@@ -24,6 +25,8 @@ def GenerateSuccessors(S):
 def A_star():
 	OPEN = []
 	solution = []
+
+	graph = Graph()
 	g = 0
 	s_start = Node(g)
 	s_goal = Node()
