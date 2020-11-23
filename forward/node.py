@@ -23,6 +23,8 @@ class Node:
 
 
 class Graph:
+    """ Assume self.vertices[0] is start
+    """
     def __init__(self):
         self.vertices = []
         # Used to checked whether a vertex exists in implicit graph
@@ -42,7 +44,10 @@ class Graph:
             self.verticesLUT[stateKey] = len(self.vertices) - 1
             return len(self.vertices) - 1
 
-    def getSuccessor(self, vertexID):
+    def getNode(self, vertexID):
+        return self.vertices[vertexID]
+
+    def getSuccessors(self, vertexID):
         pass
 
 if __name__ == '__main__':
