@@ -1,5 +1,9 @@
 import numpy as np
+import pdb
 # from .transition_models import get_successors
+
+from scipy.spatial import ConvexHull
+
 
 class Node:
     def __init__(self, robotState, envState, parentId):
@@ -21,6 +25,12 @@ class Node:
     def isGoal(self):
         return len(self.envState) == 0
 
+    def convexHull(self):
+        """
+        :return: 2D numpy array, block (x, y) locations
+        """
+        ch = ConvexHull(self.envState)
+        return self.envState[ch.vertices]
 
 class Graph:
     """ Assume self.vertices[0] is start
@@ -62,24 +72,32 @@ class Graph:
 
     def computeNodeHeuristics(self, algorithm, node):
         if algorithm == '8n':
-            # The maximum distance of any ball to its nearest hole
+            # The maximum diagonal distance of any ball to its nearest hole
             dx = node.envState[:, 0:1] - np.transpose(self.holes[:, 0:1])
             dy = node.envState[:, 1:2] - np.transpose(self.holes[:, 1:2])
+            
+            # diagonal distance
+            d8 = np.maximum(dx, dy)
+            # to the nearest hole
+            max_d8 = d8.min(axis=1)
 
-            min_dx = dx.min(axis=1)
-            min_dy = dy.min(axis=1)
-
-            max_d = np.maximum(min_dx, min_dy)
-            node.h = np.min(max_d.max())
+            node.h = np.min(max_d8.max())
         else:
             raise ValueError('Distance metric not supported: {}'.format(algorithm))
 
     def computeHeuristics(self, algorithm):
         for n in self.vertices:
-            self.computeHeuristics(n)
+            self.computeNodeHeuristics(algorithm, n)
 
 
 if __name__ == '__main__':
-    g = Graph(np.array([[3, 3]]))
-    g.addVertex(np.array([1, 1, 1, 1]), np.array([[]]), -1)
-    print(g.vertices)
+    g = Graph(np.array([[3, 3], [4, 4]]))
+    g.addVertex(np.array([1, 1, 1, 1]), np.array([[4, 4], [8, 8], [6, 6], [4, 8]]), -1)
+
+    # check convex hull
+    ch = g.vertices[0].convexHull()
+    print(ch)
+
+    # check distance
+    g.computeHeuristics('8n')
+    print(g.vertices[0].h)
