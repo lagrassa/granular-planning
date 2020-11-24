@@ -1,12 +1,13 @@
 import numpy as np
 
-from ..forward import Node, Graph
+import heapq
+from forward.node import Node, Graph
 
 def ComputePath(OPEN, graph):
 	path = []
 	CLOSED = set()
 	while len(OPEN) > 0:
-		vertexID = OPEN.pop()
+		vertexID = heapq.heappush(OPEN)[1]
 		CLOSED.add(vertexID)
 
 		S = graph.getNode(vertexID)
@@ -18,10 +19,10 @@ def ComputePath(OPEN, graph):
 		for s_prime in successors:
 			if s_prime not in CLOSED:
 				SNode = self.getNode(s_prime)
-				cost = ?
+				cost = 1.0 # TODO: cost from motion model?
 				if SNode.g > S.g + cost:
 					SNode.g = S.g + cost
-					OPEN.append(s_prime)
+					heapq.heappush(OPEN, (SNode.h ,s_prime))
 	return path
 
 def GenerateSuccessors(S):
@@ -30,7 +31,6 @@ def GenerateSuccessors(S):
 	return s_primes
 
 def A_star():
-	# TODO: change OPEN to heapq
 	OPEN = []
 	solution = []
 
