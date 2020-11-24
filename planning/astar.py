@@ -34,14 +34,19 @@ def A_star():
 	OPEN = []
 	solution = []
 
+	# both robot state and env state have t, we
+	# only need one actually because we assume they are the
+	# same
 	startRobState = np.array([1, 1, 1, 1], dtype=np.int)
 	startEnvState = np.array([1, 10, 10, 1], dtype=np.int)
 
 	graph = Graph()
+
+	# add start node, always assume it is the 0th node.
 	graph.addVertex(startRobState, startEnvState, -1)
-	# s_start = Node()
-	# s_goal = Node()
 	OPEN.append(0)
+
+	# goal node
 	solution = ComputePath(OPEN, graph)
 	return solution
 
