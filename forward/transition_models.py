@@ -34,4 +34,6 @@ def _with_blocks_transition_model(state, action, simulator):
     :param simulator:
     :return:
     """
-    pass
+    simulator.set_state(state)
+    simulator.apply_action(action)
+    return simulator.get_state()
