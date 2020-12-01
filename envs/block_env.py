@@ -3,7 +3,7 @@ import pb_utils as ut
 import pybullet_data
 import numpy as np
 class Simulator:
-    def __init__(self, gui=False, num_boxes = 2):
+    def __init__(self, gui=False, num_boxes = 2, goal_hole_width=0.3):
         if gui:
             self.physicsClient = p.connect(p.GUI)
         else:
@@ -21,8 +21,8 @@ class Simulator:
         self.boxes  = [p.loadURDF("cyl.urdf") for _ in range(num_boxes)]
         p.changeDynamics(self.robot, -1, restitution=0.02,linearDamping=1, lateralFriction=0.99, jointDamping =0.01)
         [p.changeDynamics(box, -1, restitution=0.02, linearDamping = 0.99, angularDamping =0.99, lateralFriction=0.99, jointDamping=0.01) for box in self.boxes]
-        self.plane = p.loadURDF("plane.urdf", [0,0,0])
-        p.changeDynamics(self.plane, -1, restitution=0.98, lateralFriction=0.99)
+        self.goal_hole_width=goal_hole_width
+        self.setup_hole()
         self.box_pose_idx = 3
         #self.cid = p.createConstraint(self.robot, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
         self.force = 1#0.2
@@ -31,7 +31,23 @@ class Simulator:
         p.setJointMotorControl2(self.robot, 0, p.POSITION_CONTROL, robot_pos[0], maxVelocity=maxVel, force=self.force, targetVelocity=0) 
         p.setJointMotorControl2(self.robot, 1, p.POSITION_CONTROL, robot_pos[1], maxVelocity=maxVel, force=self.force, targetVelocity=0) 
         p.setJointMotorControl2(self.robot, 2, p.POSITION_CONTROL, theta, maxVelocity=maxVel, force=self.force, targetVelocity=0) 
-        
+    def setup_hole(self): 
+        workspace_size = 1.5 # for a workspace_size*workspace_size square
+        #self.plane = p.loadURDF("plane.urdf", [0,0,0])
+        plane_height = 0.06
+        side_box_width = (workspace_size-self.goal_hole_width)/2
+        left_box = ut.create_box(workspace_size, (workspace_size-self.goal_hole_width)/2,  plane_height)
+        right_box = ut.create_box(workspace_size, (workspace_size-self.goal_hole_width)/2,  plane_height)
+        top_box = ut.create_box((workspace_size-self.goal_hole_width)/2,self.goal_hole_width, plane_height)
+        bottom_box = ut.create_box((workspace_size-self.goal_hole_width)/2,self.goal_hole_width, plane_height)
+        center_distance_sides = 0.5*(side_box_width+self.goal_hole_width)
+        ut.set_point(left_box, (0, center_distance_sides, -plane_height/2))
+        ut.set_point(right_box, (0, -center_distance_sides, -plane_height/2))
+        ut.set_point(top_box, (center_distance_sides,0, -plane_height/2))
+        ut.set_point(bottom_box, (-center_distance_sides,0, -plane_height/2))
+        #self.top_box = 
+        blocks = [left_box, right_box, top_box, bottom_box]
+        [p.changeDynamics(block, -1, restitution=0.98, lateralFriction=0.99) for block in blocks]
 
     def set_state(self, state):
         """
@@ -48,6 +64,7 @@ class Simulator:
             box_pose = state[self.box_pose_idx + 2*i:self.box_pose_idx+2*i+2]
             ut.set_point(self.boxes[i], np.hstack([box_pose, self.height*0.5]))
         self.set_motors(robot_pos, robot_orn)
+        import ipdb; ipdb.set_trace()
         #p.changeConstraint(self.cid, robot_pos, quat, maxForce=100)
 
 
@@ -85,7 +102,7 @@ class Simulator:
 
 if __name__ == "__main__":
     world = Simulator(gui=True, num_boxes = 2)
-    robot_state  = [0,0,0.05]
+    robot_state  = [0.0,-0.37,0.05]
     box_states  = [0.2,0.2,0,0.3]
     state = np.hstack([robot_state,box_states])
     world.set_state(state)
