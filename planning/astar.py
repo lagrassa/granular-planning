@@ -18,7 +18,7 @@ def ComputePath(OPEN, graph):
 		successors = graph.getSuccessors(vertexID)
 		for s_prime in successors:
 			if s_prime not in CLOSED:
-				SNode = self.getNode(s_prime)
+				SNode = graph.getNode(s_prime)
 				cost = 1.0 # TODO: cost from motion model?
 				if SNode.g > S.g + cost:
 					SNode.g = S.g + cost

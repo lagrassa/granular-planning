@@ -1,7 +1,10 @@
+import os
 import pybullet as p
-import pb_utils as ut
+from . import pb_utils as ut
 import pybullet_data
 import numpy as np
+
+
 class Simulator:
     def __init__(self, gui=False, num_boxes = 2):
         if gui:
@@ -16,9 +19,11 @@ class Simulator:
         self.box_width = 0.01*scaling
         self.height = 0.01*scaling
         #self.robot  = ut.create_box(self.pusher_length, self.pusher_width, self.height, color = (0,1,0,1), mass=0.1)
-        self.robot = p.loadURDF("paddle.urdf")
+
+        urdf_folder = os.path.split(os.path.abspath(__file__))[0]
+        self.robot = p.loadURDF(os.path.join(urdf_folder, "paddle.urdf"))
         #self.boxes  = [ut.create_box(self.box_width, self.box_width, self.height, color = (1,0,0,1), mass = 5) for _ in range(num_boxes)]
-        self.boxes  = [p.loadURDF("cyl.urdf") for _ in range(num_boxes)]
+        self.boxes  = [p.loadURDF(os.path.join(urdf_folder ,"cyl.urdf")) for _ in range(num_boxes)]
         p.changeDynamics(self.robot, -1, restitution=0.02,linearDamping=1, lateralFriction=0.99, jointDamping =0.01)
         [p.changeDynamics(box, -1, restitution=0.02, linearDamping = 0.99, angularDamping =0.99, lateralFriction=0.99, jointDamping=0.01) for box in self.boxes]
         self.plane = p.loadURDF("plane.urdf", [0,0,0])
@@ -26,12 +31,12 @@ class Simulator:
         self.box_pose_idx = 3
         #self.cid = p.createConstraint(self.robot, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
         self.force = 1#0.2
+
     def set_motors(self, robot_pos, theta):
         maxVel = 1
         p.setJointMotorControl2(self.robot, 0, p.POSITION_CONTROL, robot_pos[0], maxVelocity=maxVel, force=self.force, targetVelocity=0) 
         p.setJointMotorControl2(self.robot, 1, p.POSITION_CONTROL, robot_pos[1], maxVelocity=maxVel, force=self.force, targetVelocity=0) 
-        p.setJointMotorControl2(self.robot, 2, p.POSITION_CONTROL, theta, maxVelocity=maxVel, force=self.force, targetVelocity=0) 
-        
+        p.setJointMotorControl2(self.robot, 2, p.POSITION_CONTROL, theta, maxVelocity=maxVel, force=self.force, targetVelocity=0)         
 
     def set_state(self, state):
         """
@@ -70,17 +75,15 @@ class Simulator:
         ut.simulate_for_duration(duration)
 
     def get_state(self):
+        """Returns the current states
+        :return: (1D np.array with 3 elements, 2D np.array number-of-blocks x 2)
         """
-        Returns the current state
-        :param state:
-        :return:
-        """
-        state = np.zeros(3+(2*len(self.boxes)))
-        state[:3] = ut.get_joint_positions(self.robot, (0,1,2))
+        boxState = np.zeros([len(self.boxes), 2])
+        robotState = ut.get_joint_positions(self.robot, (0,1,2))
         for i, box in enumerate(self.boxes):
             pose = ut.get_pose(box)
-            state[self.box_pose_idx+2*i:self.box_pose_idx+2*i+2] = pose[0][:2]
-        return state
+            state[i, :] = pose[0][:2]
+        return robotState, boxState
         
 
 if __name__ == "__main__":
