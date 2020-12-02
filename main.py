@@ -18,53 +18,48 @@ def quantRobotState(robotState, t, xy_step, theta_step):
 def quantBlockStates(blockStates, step):
     return (blockStates // step).astype(np.int)
 
-
 # Set up the simulator
-# goal size divided by cell size must be an integer
-workspace_size = 15
+# workspace top left = [-workspace_size/2, +workspace_size/2]
+# bottom right = [-workspace_size/2, -workspace_size/2]
+workspace_size = 5
 goal_size = 0.3
-num_cell_x = 100
-num_cell_theta = 4
 
-world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
-robot_state  = [0.0,-0.37,0.05]
-box_states  = [0.2,0.2,0,0.3]
-state = np.hstack([robot_state,box_states])
+world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
+robot_state = [0.0,-0.37,0.05]
+box_states = [0.2,0.2,0,0.3]
+state = np.hstack([robot_state, box_states])
 world.set_state(state)
 obs = world.get_state()
 assert(np.allclose(state, obs))
 
-shift_y = np.array([0,0.05,0])
-world.apply_action(shift_y)
-world.apply_action(shift_y)
-world.apply_action(shift_y)
-world.apply_action(shift_y)
 print("Simulator created")
 
 # Create graph
-quant_xy_step = workspace_size / num_cell_x
-quant_theta_step = np.pi / num_cell_theta
+# goal_size divided by step_xy must be an integer
+step_xy = 0.1
+step_theta = np.pi / 4
 
-robotState, blockStates = world.get_robot_blk_states()
+while True:
+    robotState, blockStates = world.get_robot_blk_states()
 
-rState = quantRobotState(robotState, 0, quant_xy_step, quant_theta_step)
-bStates = quantBlockStates(blockStates, quant_xy_step)
+    rState = quantRobotState(robotState, 0, step_xy, step_theta)
+    bStates = quantBlockStates(blockStates, step_xy)
 
-numGoalCells = int(goal_size // quant_xy_step)
-goalX, goalY = np.meshgrid(np.arange(numGoalCells), np.arange(numGoalCells))
-goal = np.stack([goalX.flat, goalY.flat], axis=1)
-g = Graph(goal, world)
-g.addVertex(robotState, blockStates, -1)
+    numGoalCells = int(goal_size // step_xy)
+    goalX, goalY = np.meshgrid(np.arange(numGoalCells), np.arange(numGoalCells))
+    goal = np.stack([goalX.flat, goalY.flat], axis=1)
+    g = Graph(goal, world, step_xy, step_theta)
+    g.addVertex(rState, bStates, -1)
 
-# check convex hull
-# ch = g.vertices[0].convexHull()
-# print(ch)
+    # check convex hull
+    # ch = g.vertices[0].convexHull()
+    # print(ch)
 
-# check distance
-g.computeHeuristics('8n')
-print("Graph created")
+    # check distance
+    g.computeHeuristics('8n')
+    print("Graph created")
 
-# A star
-plan = astar.A_star(g)
-print("Plan created")
+    # A star
+    plan = astar.A_star(g)
+    print("Plan created")
 

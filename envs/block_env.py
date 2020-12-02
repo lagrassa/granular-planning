@@ -23,7 +23,7 @@ class Simulator:
         urdf_folder = os.path.split(os.path.abspath(__file__))[0]
         self.robot = p.loadURDF(os.path.join(urdf_folder, "paddle.urdf"))
         #self.boxes  = [ut.create_box(self.box_width, self.box_width, self.height, color = (1,0,0,1), mass = 5) for _ in range(num_boxes)]
-        self.boxes  = [p.loadURDF(os.path.join(urdf_folder ,"cyl.urdf")) for _ in range(num_boxes)]
+        self.boxes  = [p.loadURDF(os.path.join(urdf_folder, "cyl.urdf")) for _ in range(num_boxes)]
         p.changeDynamics(self.robot, -1, restitution=0.02,linearDamping=1, lateralFriction=0.99, jointDamping =0.01)
         [p.changeDynamics(box, -1, restitution=0.02, linearDamping = 0.99, angularDamping =0.99, lateralFriction=0.99, jointDamping=0.01) for box in self.boxes]
         self.goal_hole_width=goal_hole_width
@@ -37,8 +37,10 @@ class Simulator:
         p.setJointMotorControl2(self.robot, 0, p.POSITION_CONTROL, robot_pos[0], maxVelocity=maxVel, force=self.force, targetVelocity=0) 
         p.setJointMotorControl2(self.robot, 1, p.POSITION_CONTROL, robot_pos[1], maxVelocity=maxVel, force=self.force, targetVelocity=0) 
         p.setJointMotorControl2(self.robot, 2, p.POSITION_CONTROL, theta, maxVelocity=maxVel, force=self.force, targetVelocity=0) 
+
     def setup_hole(self): 
-        workspace_size = self.workspace_size # for a workspace_size*workspace_size square
+        # for a workspace_size*workspace_size square
+        workspace_size = self.workspace_size 
         #self.plane = p.loadURDF("plane.urdf", [0,0,0])
         plane_height = 0.06
         side_box_width = (workspace_size-self.goal_hole_width)/2
@@ -46,6 +48,7 @@ class Simulator:
         right_box = ut.create_box(workspace_size, (workspace_size-self.goal_hole_width)/2,  plane_height)
         top_box = ut.create_box((workspace_size-self.goal_hole_width)/2,self.goal_hole_width, plane_height)
         bottom_box = ut.create_box((workspace_size-self.goal_hole_width)/2,self.goal_hole_width, plane_height)
+        
         center_distance_sides = 0.5*(side_box_width+self.goal_hole_width)
         ut.set_point(left_box, (0, center_distance_sides, -plane_height/2))
         ut.set_point(right_box, (0, -center_distance_sides, -plane_height/2))
@@ -73,7 +76,12 @@ class Simulator:
         #p.changeConstraint(self.cid, robot_pos, quat, maxForce=100)
 
     def set_robot_blk_states(self, rState, bStates):
-        pass
+        """Set simulator internal states
+        :param rState: 1D np array (x, y, theta)
+        :param bStates: 2D np array [(x, y)]
+        """
+        state = np.concat((rState, bStates.flat))
+        return self.set_state(state)
 
     def apply_action(self, action):
         """
