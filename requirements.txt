@@ -1,3 +1,4 @@
+ipdb
 numpy
 pybullet==3.0.6
 pyquaternion

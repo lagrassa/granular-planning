@@ -11,6 +11,7 @@ class Node:
 
         :param robotState: a 1D numpy array of length 4, representing (t, x, y, theta).
         :param envState: a Nx2 numpy array of [(x, y) for block1, (x, y) for block 2, ...]
+        :param parentId: index to graph's node list
         """
         self.h = 0.0
         self.g = 1e10
@@ -35,16 +36,24 @@ class Node:
 class Graph:
     """ Assume self.vertices[0] is start
     """
-    def __init__(self, holePos):
+    def __init__(self, holePos, world):
         """
         :param holePos: 2 Nx2 numpy array of [(x, y)], np.int
+        :param world: simulator
         """
         self.vertices = []
         # Used to checked whether a vertex exists in implicit graph
         self.verticesLUT = {}
         # Hole positions, used to calculate heuristics 
         self.holes = holePos
+        self.world = world
 
+        # rotate + push, (dxy, dtheta)
+        self.actions = np.array([[1,0],
+                                 [-1,0],
+                                 [0,1],
+                                 [0,-1],
+                                ])
     def addVertex(self, robotState, envState, parentId):
         """
         :param robotState: a 1D numpy array of length 4, representing (t, x, y, theta).
@@ -65,7 +74,13 @@ class Graph:
     def getSuccessors(self, vertexID):
         """ Call functions from transition model
         """
-        pass
+        successors = []
+        for action in self.actions:
+            self.world.set_state()
+            self.world.apply_action(action)
+            nextRobot, nextBlks = self.world.get_robot_blk_states()
+            successors.append(self.addVertex(nextRobot, nextBlks, vertexID))
+        return successors
 
     def diagDistance(self, vertexID):
         return max(self.vertices[vertexID])

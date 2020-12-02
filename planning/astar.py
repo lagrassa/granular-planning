@@ -7,7 +7,7 @@ def ComputePath(OPEN, graph):
 	path = []
 	CLOSED = set()
 	while len(OPEN) > 0:
-		vertexID = heapq.heappush(OPEN)[1]
+		vertexID = heapq.heappop(OPEN)[1]
 		CLOSED.add(vertexID)
 
 		S = graph.getNode(vertexID)
@@ -22,29 +22,13 @@ def ComputePath(OPEN, graph):
 				cost = 1.0 # TODO: cost from motion model?
 				if SNode.g > S.g + cost:
 					SNode.g = S.g + cost
-					heapq.heappush(OPEN, (SNode.h ,s_prime))
+					heapq.heappush(OPEN, (SNode.h, s_prime))
 	return path
 
-def GenerateSuccessors(S):
-	s_primes = []
-	# Generate all successors of Node S
-	return s_primes
 
-def A_star():
-	OPEN = []
+def A_star(graph):
+	OPEN = [(1e10, 0)]
 	solution = []
-
-	# both robot state and env state have t, we
-	# only need one actually because we assume they are the
-	# same
-	startRobState = np.array([1, 1, 1, 1], dtype=np.int)
-	startEnvState = np.array([1, 10, 10, 1], dtype=np.int)
-
-	graph = Graph()
-
-	# add start node, always assume it is the 0th node.
-	graph.addVertex(startRobState, startEnvState, -1)
-	OPEN.append(0)
 
 	# goal node
 	solution = ComputePath(OPEN, graph)

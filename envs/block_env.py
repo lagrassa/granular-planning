@@ -6,12 +6,13 @@ import numpy as np
 
 
 class Simulator:
-    def __init__(self, gui=False, num_boxes = 2, goal_hole_width=0.3):
+    def __init__(self, workspace_size, goal_hole_width, gui=False, num_boxes = 2):
         if gui:
             self.physicsClient = p.connect(p.GUI)
         else:
             self.physicsClient = p.connect(p.DIRECT)
 
+        self.workspace_size = workspace_size
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         scaling = 10
         self.pusher_length = 0.1*scaling
@@ -19,7 +20,6 @@ class Simulator:
         self.box_width = 0.01*scaling
         self.height = 0.01*scaling
         #self.robot  = ut.create_box(self.pusher_length, self.pusher_width, self.height, color = (0,1,0,1), mass=0.1)
-
         urdf_folder = os.path.split(os.path.abspath(__file__))[0]
         self.robot = p.loadURDF(os.path.join(urdf_folder, "paddle.urdf"))
         #self.boxes  = [ut.create_box(self.box_width, self.box_width, self.height, color = (1,0,0,1), mass = 5) for _ in range(num_boxes)]
@@ -31,13 +31,14 @@ class Simulator:
         self.box_pose_idx = 3
         #self.cid = p.createConstraint(self.robot, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
         self.force = 1#0.2
+
     def set_motors(self, robot_pos, theta):
         maxVel = 1
         p.setJointMotorControl2(self.robot, 0, p.POSITION_CONTROL, robot_pos[0], maxVelocity=maxVel, force=self.force, targetVelocity=0) 
         p.setJointMotorControl2(self.robot, 1, p.POSITION_CONTROL, robot_pos[1], maxVelocity=maxVel, force=self.force, targetVelocity=0) 
         p.setJointMotorControl2(self.robot, 2, p.POSITION_CONTROL, theta, maxVelocity=maxVel, force=self.force, targetVelocity=0) 
     def setup_hole(self): 
-        workspace_size = 1.5 # for a workspace_size*workspace_size square
+        workspace_size = self.workspace_size # for a workspace_size*workspace_size square
         #self.plane = p.loadURDF("plane.urdf", [0,0,0])
         plane_height = 0.06
         side_box_width = (workspace_size-self.goal_hole_width)/2
@@ -71,6 +72,8 @@ class Simulator:
         self.set_motors(robot_pos, robot_orn)
         #p.changeConstraint(self.cid, robot_pos, quat, maxForce=100)
 
+    def set_robot_blk_states(self, rState, bStates):
+        pass
 
     def apply_action(self, action):
         """
@@ -91,19 +94,30 @@ class Simulator:
         ut.simulate_for_duration(duration)
 
     def get_state(self):
-        """Returns the current states
-        :return: (1D np.array with 3 elements, 2D np.array number-of-blocks x 2)
         """
-        boxState = np.zeros([len(self.boxes), 2])
-        robotState = ut.get_joint_positions(self.robot, (0,1,2))
+        Returns the current state
+        :param state:
+        :return:
+        """
+        state = np.zeros(3+(2*len(self.boxes)))
+        state[:3] = ut.get_joint_positions(self.robot, (0,1,2))
         for i, box in enumerate(self.boxes):
             pose = ut.get_pose(box)
-            state[i, :] = pose[0][:2]
-        return robotState, boxState
-        
+            state[self.box_pose_idx+2*i:self.box_pose_idx+2*i+2] = pose[0][:2]
+        return state
+
+    def get_robot_blk_states(self):
+        """Returns the robot and block states. robot state is (x, y, theta), block state is (x, y)
+        :return: (1D np.array with 3 elements, 2D np.array number-of-blocks x 2)
+        """
+        state = self.get_state()
+        robotState = state[:3]
+        boxState = state[3:].reshape([len(self.boxes), 2])   
+        return robotState, boxState  
+
 
 if __name__ == "__main__":
-    world = Simulator(gui=True, num_boxes = 2)
+    world = Simulator(1.5, 0.3, gui=True, num_boxes = 2)
     robot_state  = [0.0,-0.37,0.05]
     box_states  = [0.2,0.2,0,0.3]
     state = np.hstack([robot_state,box_states])
