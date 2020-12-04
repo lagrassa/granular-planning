@@ -8,10 +8,11 @@ from forward.state import EnvRepresentation
 from forward.transition_models import *
 
 
-def quantRobotState(robotState, t, xy_step, theta_step):
-    qs = np.zeros(4)
-    qs[1:3] //= xy_step
-    qs[3] //= theta_step
+def quantRobotState(robotState, xy_step, theta_step):
+    qs = np.zeros(3)
+    qs[:2] = robotState[:2] // xy_step
+    qs[2] = robotState[2] // theta_step
+    qs[2] = qs[2] % (np.pi / theta_step)
     return qs.astype(np.int)
 
 def quantBlockStates(blockStates, step):
@@ -23,9 +24,9 @@ def quantBlockStates(blockStates, step):
 workspace_size = 5
 goal_size = 0.3
 
-world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
-robot_state = [0.0,-0.37,0.05]
-box_states = [0.2,0.2,0,0.3]
+world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
+robot_state = [1.0, 1.37, 0.05]
+box_states = [1, 1, 0, 1]
 state = np.hstack([robot_state, box_states])
 world.set_state(state)
 obs = world.get_state()
@@ -38,27 +39,22 @@ print("Simulator created")
 step_xy = 0.1
 step_theta = np.pi / 4
 
+numGoalCells = int(goal_size // step_xy)
+goalX, goalY = np.meshgrid(np.arange(numGoalCells), np.arange(numGoalCells))
+goal = np.stack([goalX.flat, goalY.flat], axis=1).astype(np.int)
+g = Graph(goal, world, step_xy, step_theta)
+
 while True:
+    g.reset()
+
     robotState, blockStates = world.get_robot_blk_states()
-
-    rState = quantRobotState(robotState, 0, step_xy, step_theta)
+    rState = quantRobotState(robotState, step_xy, step_theta)
     bStates = quantBlockStates(blockStates, step_xy)
-
-    numGoalCells = int(goal_size // step_xy)
-    goalX, goalY = np.meshgrid(np.arange(numGoalCells), np.arange(numGoalCells))
-    goal = np.stack([goalX.flat, goalY.flat], axis=1)
-    g = Graph(goal, world, step_xy, step_theta)
-    g.addVertex(rState, bStates, -1)
-
-    # check convex hull
-    # ch = g.vertices[0].convexHull()
-    # print(ch)
-
-    # check distance
-    g.computeHeuristics('8n')
-    print("Graph created")
+    print("Robot:{}, blk:{}".format(rState, bStates))
+    g.addVertex(rState, bStates)
+    g.getNode(0).g = 0
 
     # A star
     plan = astar.A_star(g)
-    print("Plan created")
+    print("Plan created: {}".format(plan))
 

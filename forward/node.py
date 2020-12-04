@@ -7,26 +7,22 @@ from scipy.spatial.qhull import QhullError
 
 
 class Node:
-    def __init__(self, robotState, envState, parentId):
+    def __init__(self, robotState, envState):
         """ states and parent id should be np.int, indicating that they are quantized value
 
-        :param robotState: a 1D integer numpy array of length 4, representing (t, x, y, theta).
+        :param robotState: a 1D integer numpy array of length 3, representing (x, y, theta).
         :param envState: a Nx2 integer numpy array of [(x, y) for block1, (x, y) for block 2, ...]
-        :param parentId: index to graph's node list
         """
         self.h = 0.0
         self.g = 1e10
         self.robotState = robotState
         self.envState = envState
-        self.parentId = parentId
+        self.parentId = -1
+        self.weight = 100.0
 
     @property
     def f(self):
-        return self.h + self.g
-
-    def isGoal(self):
-        """Reach the goal when there is no blocks left in the environment"""
-        return len(self.envState) == 0
+        return self.weight * self.h + self.g
 
     def convexHull(self):
         """ Return the convex hull of blocks' centroids if points are not colinear. Otherwise,
@@ -45,7 +41,7 @@ class Node:
 class Graph:
     """ Assume self.vertices[0] is start state
     """
-    def __init__(self, holePos, world, stepXY, stepTheta, numActions=4):
+    def __init__(self, holePos, world, stepXY, stepTheta, numActions=4, heuristicAlg='8n'):
         """
         :param holePos: 2D Nx2 numpy array of [(x, y)], np.int
         :param world: simulator
@@ -63,29 +59,42 @@ class Graph:
         self.stepTheta = stepTheta
 
         self.numActions = numActions
+        self.heuristicAlg = heuristicAlg
 
-    def addVertex(self, robotState, envState, parentId):
+    def reset(self):
+        self.vertices = []
+        self.verticesLUT = {}
+
+    def isGoal(self, node):
+        """Reach the goal when all blocks are in the holes"""
+        return self.diagDistance(node, self.holes) == 0
+
+    def addVertex(self, robotState, envState):
         """ Maintains both vertices list and verticesLUT
-        :param robotState: a 1D numpy array of length 4, representing (t, x, y, theta).
+        :param robotState: a 1D numpy array of length 3, representing (x, y, theta).
         :param envState: a Nx2 numpy array of [(x, y) for block1, (x, y) for block 2, ...]
         :return: vertex index 
         """
-        stateKey = robotState.tobytes() + envState.tobytes() + np.array(parentId).tobytes()
+        # Disable time
+        robotState[0] = 0
+        stateKey = robotState.tobytes() + envState.tobytes()
         if stateKey in self.verticesLUT:
             return self.verticesLUT[stateKey]
         else:
-            self.vertices.append(Node(robotState, envState, parentId))
+            self.vertices.append(Node(robotState, envState))
             self.verticesLUT[stateKey] = len(self.vertices) - 1
+            self.computeNodeHeuristics(self.vertices[-1])
+
             return len(self.vertices) - 1
 
     def getNode(self, vertexID):
         return self.vertices[vertexID]
 
-    def quantRobotState(self, t, robotState):
-        qs = np.zeros(4)
-        qs[0] = t
-        qs[1:3] //= self.stepXY
-        qs[3] //= self.stepTheta
+    def quantRobotState(self, robotState):
+        qs = np.zeros(3)
+        qs[:2] = robotState[:2] // self.stepXY
+        qs[2] = robotState[2] // self.stepTheta
+        qs[2] = qs[2] % (np.pi / self.stepTheta)
         return qs.astype(np.int)
 
     def quantBlockStates(self, blockStates):
@@ -93,8 +102,8 @@ class Graph:
 
     def iQuantRobotState(self, robotState):
         iqs = np.zeros(3)
-        iqs[:2] = robotState[1:3] * self.stepXY + 0.5 * self.stepXY
-        iqs[2] = robotState[3] * self.stepTheta + 0.5 * self.stepTheta
+        iqs[:2] = robotState[:2] * self.stepXY + 0.5 * self.stepXY
+        iqs[2] = robotState[2] * self.stepTheta + 0.5 * self.stepTheta
         return iqs
 
     def iQuantBlockStates(self, blockStates):
@@ -107,13 +116,13 @@ class Graph:
         simBlkStates = self.iQuantBlockStates(n.envState)
         return np.concatenate((simRobotState, simBlkStates.flat))
 
-    def simStateToGraphState(self, t, rState, bStates):
-        return self.quantRobotState(t, rState), self.quantBlockStates(bStates)
+    def simStateToGraphState(self, rState, bStates):
+        return self.quantRobotState(rState), self.quantBlockStates(bStates)
 
     def getSuccessors(self, vertexID):
         """ Call functions from transition model
         """
-        successors = []
+        successors = set()
         node = self.vertices[vertexID]
         simState = self.graphStateToSimState(node)
         for action in range(self.numActions):
@@ -123,28 +132,32 @@ class Graph:
             simAction = parseAction(action, node.robotState[-1], self.stepXY, self.stepTheta)
             self.world.apply_action(simAction)
             simRobotState, simBlkStates = self.world.get_robot_blk_states()
-            graphRobotState, graphBlkStates = self.simStateToGraphState(node.robotState[0] + 1, simRobotState, simBlkStates)
-            successors.append(self.addVertex(graphRobotState, graphBlkStates, vertexID))
+            graphRobotState, graphBlkStates = self.simStateToGraphState(simRobotState, simBlkStates)
+            successors.add(self.addVertex(graphRobotState, graphBlkStates))
         return successors
 
-    def computeNodeHeuristics(self, algorithm, node):
-        if algorithm == '8n':
-            # The maximum diagonal distance of any ball to its nearest hole
-            dx = node.envState[:, 0:1] - np.transpose(self.holes[:, 0:1])
-            dy = node.envState[:, 1:2] - np.transpose(self.holes[:, 1:2])
-            
-            # diagonal distance
-            d8 = np.maximum(dx, dy)
-            # to the nearest hole
-            min_d8 = d8.min(axis=1)
-            # the furthest block to the goal
-            node.h = np.min(min_d8.max())
+    def diagDistance(self, node, targets):
+        # The maximum diagonal distance of any ball to its nearest hole
+        dx = np.abs(node.envState[:, 0:1] - np.transpose(targets[:, 0:1]))
+        dy = np.abs(node.envState[:, 1:2] - np.transpose(targets[:, 1:2]))
+        
+        # diagonal distance
+        d8 = np.maximum(dx, dy)
+        # to the nearest hole
+        min_d8 = d8.min(axis=1)
+        # the furthest block to the goal
+        return np.min(min_d8.max())
+
+    def computeNodeHeuristics(self, node):
+        if self.heuristicAlg == '8n':
+            node.h = self.diagDistance(node, self.holes)
+            node.h += self.diagDistance(node, node.robotState[np.newaxis, :2])
         else:
-            raise ValueError('Distance metric not supported: {}'.format(algorithm))
+            raise ValueError('Distance metric not supported: {}'.format(self.heuristicAlg))
 
     def computeHeuristics(self, algorithm):
         for n in self.vertices:
-            self.computeNodeHeuristics(algorithm, n)
+            self.computeNodeHeuristics(n)
 
 
 if __name__ == '__main__':
@@ -154,7 +167,7 @@ if __name__ == '__main__':
     stepTheta = np.pi / 4
 
     g = Graph(holePos, world, stepXY, stepTheta)
-    g.addVertex(np.array([1, 1, 1, 1], dtype=np.int), 
+    g.addVertex(np.array([1, 1, 1], dtype=np.int), 
                         np.array([[4, 4], [8, 8], [6, 6], [4, 8]], dtype=np.int), -1)
 
     # check convex hull

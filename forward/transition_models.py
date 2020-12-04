@@ -52,7 +52,6 @@ def parseAction(graphAction, graphHeading, stepXY, stepTheta):
     :param graphAction: integer {0, 1, 2, 3}
     :param graphState: integer {0, 1, 2, 3}
     """
-    simHeading = (graphHeading + 0.5) * stepTheta
     diagStep = np.sqrt(2) / 2 * stepXY
 
     if graphAction == 0:
@@ -67,7 +66,7 @@ def parseAction(graphAction, graphHeading, stepXY, stepTheta):
         elif graphHeading == 3:
             simAction = np.array([-diagStep, -diagStep, 0])
         else:
-            raise ValueError("Invalid graphHeading= {}".format(graphAction))
+            raise ValueError("Invalid graphHeading={}".format(graphHeading))
     elif graphAction == 1:
         if graphHeading == 0:
             simAction = np.array([-stepXY, 0, 0])
