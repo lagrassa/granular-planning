@@ -1,11 +1,10 @@
+import ipdb
 import numpy as np
 import planning.astar as astar
-import ipdb
 
 from envs.block_env import Simulator
-from forward.state import EnvRepresentation 
 from forward.node import Node, Graph
-
+from forward.state import EnvRepresentation 
 from forward.transition_models import *
 
 
@@ -24,7 +23,7 @@ def quantBlockStates(blockStates, step):
 workspace_size = 5
 goal_size = 0.3
 
-world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
+world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
 robot_state = [0.0,-0.37,0.05]
 box_states = [0.2,0.2,0,0.3]
 state = np.hstack([robot_state, box_states])
