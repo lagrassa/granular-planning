@@ -75,8 +75,6 @@ class Graph:
         :param envState: a Nx2 numpy array of [(x, y) for block1, (x, y) for block 2, ...]
         :return: vertex index 
         """
-        # Disable time
-        robotState[0] = 0
         stateKey = robotState.tobytes() + envState.tobytes()
         if stateKey in self.verticesLUT:
             return self.verticesLUT[stateKey]
