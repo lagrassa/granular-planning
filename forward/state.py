@@ -1,54 +1,80 @@
 import numpy as np
 
 class Scene:
-    def __init__(self, robot_state, robot_dims, obj_states, obj_dims):
+    def __init__(self, simulator, robot_dims=None, obj_dims=None):
         """
-        :param robot_state: initial robot state. 1x3 numpy array of the values: (x, y, theta).
-        :param obj_states: inital states of the objects in the environment. Nx2 numpy array
-            of the (x, y) position of each object center.
-        :param obj_dims: Nx1 array that decribes the dimensions of the corresponding objects
-            in obj_states.
+        :param simulator: envs.block_env.Simulator object of the Pybullet simulator.
+        :param robot_dims: robot dimensions. 1x2 numpy array of the values: (width, height).
+        :param obj_dims: Nx1 array that decribes the dimensions of the objects in simulator.
         """
-        assert obj_states.shape[0] == obj_dims.shape[0]
-        self._robot_state = robot_state
-        self._robot_dims = robot_dims
-        self._obj_states = obj_states
-        self._obj_dims = obj_dims
-        # TODO need to update this everytime you add an object, assuming state is defined at obj/robot center
-        self.check_distance = np.max(robot_dims) / 2 + np.max(obj_dims)
-        #TODO might want to divide obj_dims by 2 if the dims are in terms of width and height, not for radius
-
+        self.sim = simulator
         self.use_simulator = False
 
-    def add_cylinder(self, radius, x_init, y_init):
+        self._robot_state, self._obj_states = self.sim.get_robot_blk_states()
+
+        if robot_dims is None:
+            self._robot_dims = robot_dims
+        else:
+            # TODO check that this is width, height not height width
+            self._robot_dims = np.array([self.sim.pusher_width, self.sim.pusher_length])
+        if obj_dims is None:
+            self._obj_dims = obj_dims
+        else
+            # TODO update this whenever we make changes to blocks
+            self._obj_dims = np.array([self.sim.box_width, self.sim.box_width])
+
+        # assert self._obj_states.shape[0] == self._obj_dims.shape[0]
+        
+        # TODO need to update this everytime you add an object, assuming state is defined at obj/robot center
+        self.check_distance = np.max(robot_dims) / 2 + np.max(obj_dims) / 2
+
+    def add_cylinder(self, diameter, x_init, y_init):
         """
-        :param radius: The radius of the cylinder to be added.
+        :param diameter: The diameter of the cylinder to be added.
         :param x_init: The initial x position of the cylinder center.
         :param y_init: The initial y position of the cylinder center.
+        This assumes you have already added the cylinder to the simulator (i.e. self.sim object)
         """
-        #TODO there's one in pb_utils
         self._obj_states = np.append(self.obj_states, [[x_init,y_init]])
-        self._obj_dims = np.append(self.obj_dims, [radius])
+        # TODO add the below line if we add different sized objects
+        # self._obj_dims = np.append(self.obj_dims, [diameter])
 
     def add_block(self, ):
         raise NotImplementedError
 
     def get_obj_state(self, obj_id):
-        #TODO probably just switch this with pybullet code
-        return self._obj_states[id, :]
+        if self.use_simulator:
+            _, obj_states = self.sim.get_robot_blk_states()
+            return obj_states[obj_id, :]
+        else:
+            return self._obj_states[obj_id, :]
 
-    def get_obj_dim(self, obj_id):
-        return self._obj_dim[id]
+    def get_obj_states(self):
+        if self.use_simulator:
+            _, obj_states = self.sim.get_robot_blk_states()
+            return obj_states
+        else:
+            return self._obj_states
+
+    def get_obj_dims(self, obj_id):
+        #TODO update this if we add different shapes
+        if self.use_simulator:
+            return self._obj_dims
+        else:
+            return self._obj_dims
 
     def get_robot_state(self):
-        return self._robot_state
+        if self.use_simulator:
+            robot_state, _ = self.sim.get_robot_blk_states()
+            return robot_state
+        else:
+            return self._robot_state
 
+    #TODO update the four below to have the simulator actions too
     def move_obj(self, obj_id, delta_x, delta_y):
-        #TODO probably just switch this with pybullet code
         self._obj_states[id, :] += np.array([delta_x, delta_y])
 
     def teleport_obj(self, obj_id, x, y):
-        #TODO probably just switch this with pybullet code
         self._obj_states[id, :] = np.array([x, y])
 
     def move_robot(self, delta_x, delta_y, delta_theta):
