@@ -4,7 +4,7 @@ import planning.astar as astar
 
 from envs.block_env import Simulator
 from forward.node import Node, Graph
-from forward.state import EnvRepresentation 
+from forward.state import Scene
 from forward.transition_models import *
 
 
