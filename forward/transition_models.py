@@ -57,24 +57,24 @@ def parseAction(graphAction, graphHeading, stepXY, stepTheta):
     if graphAction == 0:
         #TODO(wpu): I don't know how to handle directions other than 4 or 8. So I 
         # assume we have 8 directions. 0 is right, 2 is up, 4 is right, 6 is down
-        if graphHeading == 0:
+        if graphHeading == 2:
             simAction = np.array([stepXY, 0, 0])
-        elif graphHeading == 1:
-            simAction = np.array([diagStep, -diagStep, 0])
-        elif graphHeading == 2:
-            simAction = np.array([0, -stepXY, 0])
         elif graphHeading == 3:
+            simAction = np.array([diagStep, -diagStep, 0])
+        elif graphHeading == 0:
+            simAction = np.array([0, -stepXY, 0])
+        elif graphHeading == 1:
             simAction = np.array([-diagStep, -diagStep, 0])
         else:
             raise ValueError("Invalid graphHeading={}".format(graphHeading))
     elif graphAction == 1:
-        if graphHeading == 0:
+        if graphHeading == 2:
             simAction = np.array([-stepXY, 0, 0])
-        elif graphHeading == 1:
-            simAction = np.array([-diagStep, diagStep, 0])
-        elif graphHeading == 2:
-            simAction = np.array([0, stepXY, 0])
         elif graphHeading == 3:
+            simAction = np.array([-diagStep, diagStep, 0])
+        elif graphHeading == 0:
+            simAction = np.array([0, stepXY, 0])
+        elif graphHeading == 1:
             simAction = np.array([diagStep, diagStep, 0])
         else:
             raise ValueError("Invalid graphHeading= {}".format(graphAction))

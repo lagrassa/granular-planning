@@ -67,7 +67,7 @@ class Graph:
 
     def isGoal(self, node):
         """Reach the goal when all blocks are in the holes"""
-        return self.diagDistance(node, self.holes) == 0
+        return self.diagDistance(node, self.holes)[1] == 0
 
     def addVertex(self, robotState, envState):
         """ Maintains both vertices list and verticesLUT
@@ -90,22 +90,23 @@ class Graph:
 
     def quantRobotState(self, robotState):
         qs = np.zeros(3)
-        qs[:2] = robotState[:2] // self.stepXY
-        qs[2] = robotState[2] // self.stepTheta
-        qs[2] = qs[2] % (np.pi / self.stepTheta)
+        qs[:2] = np.round(robotState[:2] / self.stepXY)
+        qs[2] = np.round(robotState[2] / self.stepTheta)
+        # make heading index non negative
+        qs[2] = qs[2] % ((np.pi + 1e-6) // self.stepTheta)
         return qs.astype(np.int)
 
     def quantBlockStates(self, blockStates):
-        return (blockStates // self.stepXY).astype(np.int)
+        return np.round(blockStates / self.stepXY).astype(np.int)
 
     def iQuantRobotState(self, robotState):
         iqs = np.zeros(3)
-        iqs[:2] = robotState[:2] * self.stepXY + 0.5 * self.stepXY
-        iqs[2] = robotState[2] * self.stepTheta + 0.5 * self.stepTheta
+        iqs[:2] = robotState[:2] * self.stepXY
+        iqs[2] = robotState[2] * self.stepTheta
         return iqs
 
     def iQuantBlockStates(self, blockStates):
-        return blockStates * self.stepXY + 0.5 * self.stepXY
+        return blockStates * self.stepXY
 
     def graphStateToSimState(self, n):
         """ Inverse quantization
@@ -130,6 +131,8 @@ class Graph:
             simAction = parseAction(action, node.robotState[-1], self.stepXY, self.stepTheta)
             self.world.apply_action(simAction)
             simRobotState, simBlkStates = self.world.get_robot_blk_states()
+            # print("simRobotState=", simState[:3], simRobotState, action)
+            # ipdb.set_trace()
             graphRobotState, graphBlkStates = self.simStateToGraphState(simRobotState, simBlkStates)
             successors.add(self.addVertex(graphRobotState, graphBlkStates))
         return successors
@@ -144,12 +147,64 @@ class Graph:
         # to the nearest hole
         min_d8 = d8.min(axis=1)
         # the furthest block to the goal
-        return np.min(min_d8.max())
+        blkId = np.argmax(min_d8)
+        return blkId, min_d8[blkId]
+
+    def euclidDistance(self, node, targets):
+        # The maximum Euclidean distance of any ball to its nearest hole
+        dx = np.abs(node.envState[:, 0:1] - np.transpose(targets[:, 0:1]))
+        dy = np.abs(node.envState[:, 1:2] - np.transpose(targets[:, 1:2]))
+        
+        # diagonal distance
+        eucid = np.sqrt(dx ** 2 + dy ** 2)
+        # to the nearest hole
+        min_euclid = eucid.min(axis=1)
+        # the furthest block to the goal
+        blkId = np.argmax(min_euclid)
+        return blkId, min_euclid[blkId]
 
     def computeNodeHeuristics(self, node):
         if self.heuristicAlg == '8n':
-            node.h = self.diagDistance(node, self.holes)
-            node.h += self.diagDistance(node, node.robotState[np.newaxis, :2])
+            blkId, node.h = self.diagDistance(node, self.holes)
+            # distance from robot to the target block
+            d = np.max(np.abs(node.envState[blkId] - node.robotState[:2]))
+            d1 = 0
+            if node.envState[blkId][0] > 0:
+                d1 += node.robotState[0] < node.envState[blkId][0]
+            else:
+                d1 += node.robotState[0] > node.envState[blkId][0]
+            if node.envState[blkId][1] > 0:
+                d1 += node.robotState[1] < node.envState[blkId][1]
+            else:
+                d1 += node.robotState[1] > node.envState[blkId][1]
+            node.h += d + d1
+        elif self.heuristicAlg == 'sum':
+            # for debugging only, not admissible
+            # The maximum Euclidean distance of any ball to its nearest hole
+            dx = np.abs(node.envState[:, 0:1] - np.transpose(self.holes[:, 0:1]))
+            dy = np.abs(node.envState[:, 1:2] - np.transpose(self.holes[:, 1:2]))
+            
+            # diagonal distance
+            d8 = np.maximum(dx, dy)
+            # to the nearest hole
+            min_d8 = d8.min(axis=1)
+            # the furthest block to the goal
+            node.h = np.sum(min_d8)
+
+            blkId = np.argmax(min_d8)
+            node.h += np.sum(np.abs(node.envState[blkId] - node.robotState[:2]))
+
+            d1 = 0
+            if node.envState[blkId][0] > 0:
+                d1 += node.robotState[0] < node.envState[blkId][0]
+            else:
+                d1 += node.robotState[0] > node.envState[blkId][0]
+            if node.envState[blkId][1] > 0:
+                d1 += node.robotState[1] < node.envState[blkId][1]
+            else:
+                d1 += node.robotState[1] > node.envState[blkId][1]
+
+            node.h += d1
         else:
             raise ValueError('Distance metric not supported: {}'.format(self.heuristicAlg))
 
@@ -159,19 +214,43 @@ class Graph:
 
 
 if __name__ == '__main__':
-    holePos = np.array([[0, 0]], dtype=np.int)
+    holePos = np.array([[-2, -2],
+       [-1, -2],
+       [ 0, -2],
+       [ 1, -2],
+       [ 2, -2],
+       [-2, -1],
+       [-1, -1],
+       [ 0, -1],
+       [ 1, -1],
+       [ 2, -1],
+       [-2,  0],
+       [-1,  0],
+       [ 0,  0],
+       [ 1,  0],
+       [ 2,  0],
+       [-2,  1],
+       [-1,  1],
+       [ 0,  1],
+       [ 1,  1],
+       [ 2,  1],
+       [-2,  2],
+       [-1,  2],
+       [ 0,  2],
+       [ 1,  2],
+       [ 2,  2]], dtype=np.int)
     world = None
     stepXY = 0.1
     stepTheta = np.pi / 4
 
     g = Graph(holePos, world, stepXY, stepTheta)
-    g.addVertex(np.array([1, 1, 1], dtype=np.int), 
-                        np.array([[4, 4], [8, 8], [6, 6], [4, 8]], dtype=np.int), -1)
+    g.addVertex(np.array([3, 3, 1], dtype=np.int), 
+                        np.array([[0, 1], [0, 2]], dtype=np.int))
 
     # check convex hull
     ch = g.vertices[0].convexHull()
     print(ch, ch.dtype)
 
     # check distance
-    g.computeHeuristics('8n')
-    print(g.vertices[0].h)
+    print(g.isGoal(g.vertices[0]))
+    # print(g.vertices[0].h)
