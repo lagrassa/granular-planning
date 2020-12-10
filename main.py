@@ -8,20 +8,27 @@ from forward.state import Scene
 from forward.transition_models import *
 
 
-def quantRobotState(robotState, xy_step, theta_step):
+def quantRobotState(robotState, xyStep, thetaStep):
+    """Robot from continous simulator state to discrete graph state"""
     qs = np.zeros(3)
-    qs[:2] = np.round(robotState[:2] / xy_step)
-    qs[2] = np.round(robotState[2] / theta_step)
+    qs[:2] = np.round(robotState[:2] / xyStep)
+    qs[2] = np.round(robotState[2] / thetaStep)
     # avoid negative heading index
-    qs[2] = qs[2] % ((np.pi + 1e-6) // theta_step)
+    qs[2] = qs[2] % ((np.pi + 1e-6) // thetaStep)
     return qs.astype(np.int)
 
+
 def quantBlockStates(blockStates, step):
+    """Blocks from continous simulator state to discrete graph state"""
     return np.round(blockStates / step).astype(np.int)
 
+
 # Set up the simulator
-# workspace top left = [-workspace_size/2, +workspace_size/2]
-#           bottom right = [-workspace_size/2, -workspace_size/2]
+# workspace top left =      [-workspace_size/2, +workspace_size/2]
+#           bottom right =  [+workspace_size/2, -workspace_size/2]
+#
+# hole area top left =      [-goal_size/2, +goal_size/2]
+#           bottom right =  [+goal_size/2, -goal_size/2]
 #
 workspace_size = 5
 goal_size = 0.5
@@ -48,9 +55,11 @@ goal = np.stack([goalX.flat, goalY.flat], axis=1).astype(np.int)
 g = Graph(goal, world, step_xy, step_theta, numActions=4, heuristicAlg='sum')
 
 while True:
+    # Not sure whether we could reuse the graph
     g.reset()
 
     robotState, blockStates = world.get_robot_blk_states()
+    simState = world.get_state()
     rState = quantRobotState(robotState, step_xy, step_theta)
     bStates = quantBlockStates(blockStates, step_xy)
     print("Robot:{}, blk:{}".format(rState, bStates))
@@ -59,6 +68,9 @@ while True:
 
     # A star
     plan = astar.A_star(g)
-    print("Plan created: {}".format(plan))
-
-    break
+    if len(plan) > 0:
+        print("Plan created: {}".format(plan))
+        world.set_state(simState)
+        for a in plan:
+            world.apply_action(a)
+        break

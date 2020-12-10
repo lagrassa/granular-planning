@@ -19,7 +19,7 @@ class Scene:
             self._robot_dims = np.array([self.sim.pusher_width, self.sim.pusher_length])
         if obj_dims is None:
             self._obj_dims = obj_dims
-        else
+        else:
             # TODO update this whenever we make changes to blocks
             self._obj_dims = np.array([self.sim.box_width, self.sim.box_width])
 
@@ -213,6 +213,6 @@ def get_circle_bbox(position, radius):
     return np.array([position + np.array([radius, radius]),
                      position + np.array([-radius, radius]),
                      position + np.array([-radius, -radius]),
-                     position + np.array([radius, -radius])
+                     position + np.array([radius, -radius])]
     )
 

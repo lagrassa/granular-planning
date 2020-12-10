@@ -179,32 +179,38 @@ class Graph:
                 d1 += node.robotState[1] > node.envState[blkId][1]
             node.h += d + d1
         elif self.heuristicAlg == 'sum':
-            # for debugging only, not admissible
-            # The maximum Euclidean distance of any ball to its nearest hole
+            # number of blocks x epsilon admissible
+            # The maximum diagonal distance of any block to its nearest hole
             dx = np.abs(node.envState[:, 0:1] - np.transpose(self.holes[:, 0:1]))
             dy = np.abs(node.envState[:, 1:2] - np.transpose(self.holes[:, 1:2]))
             
-            # diagonal distance
+            # 1. diagonal distance heuristic
             d8 = np.maximum(dx, dy)
             # to the nearest hole
             min_d8 = d8.min(axis=1)
-            # the furthest block to the goal
+            # the sum of each block to the goal
             node.h = np.sum(min_d8)
 
+            # 2. kinematic heuristic
             blkId = np.argmax(min_d8)
             node.h += np.sum(np.abs(node.envState[blkId] - node.robotState[:2]))
 
             d1 = 0
             if node.envState[blkId][0] > 0:
                 d1 += node.robotState[0] < node.envState[blkId][0]
-            else:
+            elif node.envState[blkId][0] < 0:
                 d1 += node.robotState[0] > node.envState[blkId][0]
+            else:
+                d1 += node.robotState[0] != node.envState[blkId][0]
+
             if node.envState[blkId][1] > 0:
                 d1 += node.robotState[1] < node.envState[blkId][1]
-            else:
+            elif node.envState[blkId][1] > 0:
                 d1 += node.robotState[1] > node.envState[blkId][1]
+            else:
+                d1 += node.robotState[1] != node.envState[blkId][1]
 
-            node.h += d1
+            node.h += 10 * d1
         else:
             raise ValueError('Distance metric not supported: {}'.format(self.heuristicAlg))
 

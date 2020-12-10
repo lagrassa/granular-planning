@@ -16,13 +16,17 @@ def ComputePath(OPEN, graph):
 		# Extract S with smallest f from OPEN
 		if graph.isGoal(S):	# Create function to compare two instances of class Node
 			print("Find Goal!!!")
+			plan.append(S.robotState)
 			while S.parentId!= -1:
-				plan.append(S.robotState)
+				# TODO: We should return action, but I don't know how to get action from robotStates before
+				# and after action.
 				S = graph.getNode(S.parentId)
+				plan.append(S.robotState)
+			plan.append(S.robotState)
 			break
 
 		successors = graph.getSuccessors(vertexID)
-		print(vertexID, S.robotState, S.envState, S.g, S.h)
+		print(vertexID, S.robotState, S.g, S.h)
 		for s_prime in successors:
 			if s_prime not in CLOSED:
 				SNode = graph.getNode(s_prime)
