@@ -56,7 +56,7 @@ class Simulator:
         ut.set_point(right_box, (0, -center_distance_sides, -plane_height/2))
         ut.set_point(top_box, (center_distance_sides,0, -plane_height/2))
         ut.set_point(bottom_box, (-center_distance_sides,0, -plane_height/2))
-        #self.top_box = 
+ 
         blocks = [left_box, right_box, top_box, bottom_box]
         [p.changeDynamics(block, -1, restitution=0.98, lateralFriction=0.99) for block in blocks]
 
@@ -73,8 +73,9 @@ class Simulator:
             ut.set_joint_position(self.robot,i, state[i])
         for i, box in enumerate(self.boxes):
             box_pose = state[self.box_pose_idx + 2*i:self.box_pose_idx+2*i+2]
+            # TODO: update this condition with a more accurate one
             if np.max(np.abs(box_pose)) < self.goal_hole_width / 2 + 0.05:
-                new_h = self.height*0.5 - self.plane_height
+                new_h = self.height*0.5 - self.plane_height * (i + 1)
             else:
                 new_h = self.height*0.5
             ut.set_point(self.boxes[i], np.hstack([box_pose, new_h]))
