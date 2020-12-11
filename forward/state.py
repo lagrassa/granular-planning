@@ -77,7 +77,7 @@ class Scene:
     def teleport_obj(self, obj_id, x, y):
         self._obj_states[id, :] = np.array([x, y])
 
-    def move_robot(self, delta_x, delta_y, delta_theta):
+    def move_robot(self, delta_x, delta_y, delta_theta): #TODO Steven calculate based on current heading
         self._robot_state += np.array([delta_x, delta_y, delta_theta]).reshape(1,3)
 
     def teleport_robot(self, x, y, theta):

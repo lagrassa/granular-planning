@@ -7,17 +7,18 @@ def is_free_space_motion(state, action):
     :param action: action
     :return: whether the action occurs in free space. Mostly just uses collision_fn from state
     """
+    #TODO steven
     pass
 
-def transition_model(state, action, simulator):
+def transition_model(state, action, simulator, robot_dims=None, object_dims=None):
     """
     Given current state and action return next state
-    :param state:
+    :param state: StevenState object
     :param action:
     :param simulator instance
     :return:
     """
-    if collision_free_action(state, action):
+    if is_free_space_motion(state, action):
         return _free_space_transition_model(state, action)
     return _with_blocks_transition_model(state, action, simulator)
 
@@ -28,6 +29,7 @@ def _free_space_transition_model(state, action):
     :param action:
     :return:
     """
+    #TODO use StevenState
     pass
 
 def _with_blocks_transition_model(state, action, simulator):
@@ -38,16 +40,29 @@ def _with_blocks_transition_model(state, action, simulator):
     :param simulator:
     :return:
     """
-    simulator.set_state(state)
+    simulator.set_state(state) #TODO update to StevenState API
     simulator.apply_action(action)
     simRobotState, simBlkStates = simulator.get_robot_blk_states()
     return simRobotState, simBlkStates
 
-def collision_free_action(state, action):
+def parseActionDTheta(action, stepXY, stepTheta):
+    """Inside a graph, there are 4 graph actions: 
+    0. move forward along heading direction
+    1. move backward along heading direction
+    2. roate clockwise
+    3. rotate counter clockwise
+    Changes to (d, theta) representation where d can be negative (indicating to move backward)
     """
-    Predicts whether there will be a collision by applying action to state
-    """
-    return False
+    if action == 0:
+        return (stepXY, 0)
+    elif action == 1:
+        return (-stepXY, 0)
+    elif action == 2:
+        return (0, stepTheta)
+    elif action == 3:
+        return (0, -stepTheta)
+    else:
+        raise ValueError("Invalid graphAction= {}".format(action))
 
 
 def parseAction(graphAction, graphHeading, stepXY, stepTheta):
@@ -65,7 +80,7 @@ def parseAction(graphAction, graphHeading, stepXY, stepTheta):
 
     if graphAction == 0:
         #TODO(wpu): I don't know how to handle directions other than 4 or 8. So I 
-        # assume we have 8 directions. 0 is right, 2 is up, 4 is right, 6 is down
+        # assume we have 8 directions. 0 is right, 2 is up, 4 is left, 6 is down
         if graphHeading == 2:
             simAction = np.array([stepXY, 0, 0])
         elif graphHeading == 3:

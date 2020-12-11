@@ -124,14 +124,15 @@ class Graph:
         """
         successors = []
         node = self.vertices[vertexID]
-        simState = self.graphStateToSimState(node)
+        simState = self.graphStateToSimState(node) #TODO use Steven State object
         for action in range(self.numActions):
-            simAction = parseAction(action, node.robotState[-1], self.stepXY, self.stepTheta)
-            simRobotState, simBlkStates = transition_model(simState, simAction, self.world) 
+            #simAction = parseAction(action, node.robotState[-1], self.stepXY, self.stepTheta)
+            simAction = parseActionDTheta(action, self.stepXY, self.stepTheta) #uses new sim representation
+            simRobotState, simBlkStates = transition_model(simState, simAction, self.world)
             # graph and sim have different representation for action
             # print("simRobotState=", simState[:3], simRobotState, action)
             # ipdb.set_trace()
-            graphRobotState, graphBlkStates = self.simStateToGraphState(simRobotState, simBlkStates)
+            graphRobotState, graphBlkStates = self.simStateToGraphState(simRobotState, simBlkStates) #TODO convert back from Steven State
             successors.append(self.addVertex(graphRobotState, graphBlkStates))
         return successors
 

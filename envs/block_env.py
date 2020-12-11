@@ -16,8 +16,6 @@ class Simulator:
         self.workspace_size = workspace_size
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         scaling = 10
-        self.pusher_length = 0.1*scaling
-        self.pusher_width = 0.01*scaling
         self.box_width = 0.01*scaling
         self.height = 0.01*scaling
         #self.robot  = ut.create_box(self.pusher_length, self.pusher_width, self.height, color = (0,1,0,1), mass=0.1)
@@ -96,6 +94,8 @@ class Simulator:
         Applies action to environment and then simulates it
         :param action:
         :return:
+
+        TODO change action type
         """
         #tune these parameters to make the physics easy
         delta_yaw = action[2]
