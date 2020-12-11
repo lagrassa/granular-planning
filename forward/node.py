@@ -128,9 +128,7 @@ class Graph:
         for action in range(self.numActions):
             simAction = parseAction(action, node.robotState[-1], self.stepXY, self.stepTheta)
             simRobotState, simBlkStates = transition_model(simState, simAction, self.world) 
-            self.world.set_state(simState)
             # graph and sim have different representation for action
-            simRobotState, simBlkStates = self.world.get_robot_blk_states()
             # print("simRobotState=", simState[:3], simRobotState, action)
             # ipdb.set_trace()
             graphRobotState, graphBlkStates = self.simStateToGraphState(simRobotState, simBlkStates)
