@@ -112,9 +112,7 @@ class Graph:
     def graphStateToSimState(self, n):
         """ Inverse quantization
         """
-        simRobotState = self.iQuantRobotState(n.robotState)
-        simBlkStates = self.iQuantBlockStates(n.envState)
-        return np.concatenate((simRobotState, simBlkStates.flat))
+        return self.iQuantRobotState(n.robotState), self.iQuantBlockStates(n.envState)
 
     def simStateToGraphState(self, rState, bStates):
         return self.quantRobotState(rState), self.quantBlockStates(bStates)
@@ -124,11 +122,17 @@ class Graph:
         """
         successors = []
         node = self.vertices[vertexID]
-        simState = self.graphStateToSimState(node) #TODO use Steven State object
-        for action in range(self.numActions):
+        parentRobotState, parentBlockStates = self.graphStateToSimState(node)
+        simState = State(self.world) #TODO probably a better way to do this, instead of making a new obj every time
+        for action_type in range(self.numActions):
             #simAction = parseAction(action, node.robotState[-1], self.stepXY, self.stepTheta)
-            simAction = parseActionDTheta(action, self.stepXY, self.stepTheta) #uses new sim representation
-            simRobotState, simBlkStates = transition_model(simState, simAction, self.world)
+            simAction = parseActionDTheta(action_type, self.stepXY, self.stepTheta) #uses new sim representation
+            simRobotState, simBlkStates = transition_model(simState,
+                                                           parentRobotState,
+                                                           parentBlockStates,
+                                                           simAction,
+                                                           self.world,
+                                                           threshold=self.stepXY*1.5)
             # graph and sim have different representation for action
             # print("simRobotState=", simState[:3], simRobotState, action)
             # ipdb.set_trace()

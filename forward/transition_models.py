@@ -1,51 +1,62 @@
 import numpy as np
 
-def is_free_space_motion(state, action):
-    """
+# def is_free_space_motion(state, action):
+#     """
 
-    :param state:  beginning state
-    :param action: action
-    :return: whether the action occurs in free space. Mostly just uses collision_fn from state
-    """
-    #TODO steven
-    pass
+#     :param state:  beginning state
+#     :param action: action
+#     :return: whether the action occurs in free space. Mostly just uses collision_fn from state
+#     """
+#     d
+#     pass
 
-def transition_model(state, action, simulator, robot_dims=None, object_dims=None):
+def transition_model(state, robot_state, block_state, action, simulator, threshold):
     """
     Given current state and action return next state
-    :param state: StevenState object
-    :param action:
+    :param state: state.State object
+    :param robot_state: parent (x,y,theta) state of the robot
+    :param block_state: parent Nx2 array of the (x,y) states of the objects
+    :param action: tuple of the forward/backward motion and rotation to apply to robot
     :param simulator instance
     :return:
     """
-    if is_free_space_motion(state, action):
-        return _free_space_transition_model(state, action)
-    return _with_blocks_transition_model(state, action, simulator)
+    # set parent state
+    state.set_state(robot_state, block_state)
+    # check whether to use simulator for dynamics
+    state.is_free_space_motion(threshold=threshold)
+    # apply action
+    state.apply_action(action)
+    # return successor
+    return state.get_state()
 
-def _free_space_transition_model(state, action):
-    """
-    Determines next state, requires that this is a free space motion
-    :param state:
-    :param action:
-    :return:
-    """
-    #TODO use StevenState
-    pass
+    # if is_free_space_motion(state, action):
+    #     return _free_space_transition_model(state, action)
+    # return _with_blocks_transition_model(state, action, simulator)
 
-def _with_blocks_transition_model(state, action, simulator):
-    """
-    Using a simulator, returns the next state
-    :param state:
-    :param action:
-    :param simulator:
-    :return:
-    """
-    simulator.set_state(state) #TODO update to StevenState API
-    simulator.apply_action(action)
-    simRobotState, simBlkStates = simulator.get_robot_blk_states()
-    return simRobotState, simBlkStates
+# def _free_space_transition_model(state, action):
+#     """
+#     Determines next state, requires that this is a free space motion
+#     :param state:
+#     :param action:
+#     :return:
+#     """
+#     #TODO use StevenState
+#     pass
 
-def parseActionDTheta(action, stepXY, stepTheta):
+# def _with_blocks_transition_model(state, action, simulator):
+#     """
+#     Using a simulator, returns the next state
+#     :param state:
+#     :param action:
+#     :param simulator:
+#     :return:
+#     """
+#     simulator.set_state(state) #TODO update to StevenState API
+#     simulator.apply_action(action)
+#     simRobotState, simBlkStates = simulator.get_robot_blk_states()
+#     return simRobotState, simBlkStates
+
+def parseActionDTheta(action_type, stepXY, stepTheta):
     """Inside a graph, there are 4 graph actions: 
     0. move forward along heading direction
     1. move backward along heading direction
@@ -53,16 +64,16 @@ def parseActionDTheta(action, stepXY, stepTheta):
     3. rotate counter clockwise
     Changes to (d, theta) representation where d can be negative (indicating to move backward)
     """
-    if action == 0:
+    if action_type == 0:
         return (stepXY, 0)
-    elif action == 1:
+    elif action_type == 1:
         return (-stepXY, 0)
-    elif action == 2:
+    elif action_type == 2:
         return (0, stepTheta)
-    elif action == 3:
+    elif action_type == 3:
         return (0, -stepTheta)
     else:
-        raise ValueError("Invalid graphAction= {}".format(action))
+        raise ValueError("Invalid graphAction= {}".format(action_type))
 
 
 def parseAction(graphAction, graphHeading, stepXY, stepTheta):
