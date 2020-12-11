@@ -28,11 +28,12 @@ class Simulator:
         p.changeDynamics(self.robot, -1, restitution=0.002,linearDamping=1, lateralFriction=0.99, jointDamping =0.01)
         [p.changeDynamics(box, -1, restitution=0.002, linearDamping = 0.99, angularDamping =0.99, lateralFriction=0.99, jointDamping=0.01) for box in self.boxes]
         self.goal_hole_width=goal_hole_width
+        ut.enable_gravity()
         self.plane_height = 0.5
         self.setup_hole()
         self.box_pose_idx = 3
         #self.cid = p.createConstraint(self.robot, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
-        self.force = 10.0#0.2
+        self.force = 30.0#0.2
 
     def set_motors(self, robot_pos, theta):
         maxVel = 1
