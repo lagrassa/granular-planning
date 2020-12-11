@@ -1,11 +1,11 @@
 import numpy as np
 
-class Scene:
+class State:
     def __init__(self, simulator, robot_dims=None, obj_dims=None):
         """
         :param simulator: envs.block_env.Simulator object of the Pybullet simulator.
-        :param robot_dims: robot dimensions. 1x2 numpy array of the values: (width, height).
-        :param obj_dims: Nx1 array that decribes the dimensions of the objects in simulator.
+        :param robot_dims: robot dimensions. 1x2 numpy array of the values: (x_dim, y_dim).
+        :param obj_dims: Float that decribes the radius of the cylinders in simulator.
         """
         self.sim = simulator
         self.use_simulator = False
@@ -16,33 +16,23 @@ class Scene:
             self._robot_dims = robot_dims
         else:
             # TODO check that this is width, height not height width
-            self._robot_dims = np.array([self.sim.pusher_width, self.sim.pusher_length])
+            self._robot_dims = np.array([0.8, 0.1])
         if obj_dims is None:
             self._obj_dims = obj_dims
         else:
             # TODO update this whenever we make changes to blocks
-            self._obj_dims = np.array([self.sim.box_width, self.sim.box_width])
+            self._obj_dims = 0.05
 
         # assert self._obj_states.shape[0] == self._obj_dims.shape[0]
         
         # TODO need to update this everytime you add an object, assuming state is defined at obj/robot center
         self.check_distance = np.max(robot_dims) / 2 + np.max(obj_dims) / 2
 
-    def add_cylinder(self, diameter, x_init, y_init):
-        """
-        :param diameter: The diameter of the cylinder to be added.
-        :param x_init: The initial x position of the cylinder center.
-        :param y_init: The initial y position of the cylinder center.
-        This assumes you have already added the cylinder to the simulator (i.e. self.sim object)
-        """
-        self._obj_states = np.append(self.obj_states, [[x_init,y_init]])
-        # TODO add the below line if we add different sized objects
-        # self._obj_dims = np.append(self.obj_dims, [diameter])
-
-    def add_block(self, ):
-        raise NotImplementedError
-
     def get_obj_state(self, obj_id):
+        """
+        Get the (x,y) position of the given object
+        :param obj_id: int that represents the array index of the desired object
+        """
         if self.use_simulator:
             _, obj_states = self.sim.get_robot_blk_states()
             return obj_states[obj_id, :]
@@ -50,38 +40,112 @@ class Scene:
             return self._obj_states[obj_id, :]
 
     def get_obj_states(self):
+        """
+        Get the (Nx2) (x,y) positions of all the objects, where N is the number of objects
+        """
         if self.use_simulator:
             _, obj_states = self.sim.get_robot_blk_states()
             return obj_states
         else:
             return self._obj_states
 
-    def get_obj_dims(self, obj_id):
-        #TODO update this if we add different shapes
+    def get_obj_dims(self):
+        """
+        Get the dimensions of the objects
+        - TODO update this if we add different shapes
+        """
         if self.use_simulator:
             return self._obj_dims
         else:
             return self._obj_dims
 
     def get_robot_state(self):
+        """
+        Get the (x,y,theta) state of the robot
+        """
         if self.use_simulator:
             robot_state, _ = self.sim.get_robot_blk_states()
             return robot_state
         else:
             return self._robot_state
 
-    #TODO update the four below to have the simulator actions too
-    def move_obj(self, obj_id, delta_x, delta_y):
-        self._obj_states[id, :] += np.array([delta_x, delta_y])
+    def get_state(self):
+        """
+        Get the (x,y,theta) state of the robot and the Nx2 array of the (x,y) states of the objects
+        """
+        if self.use_simulator:
+            return self.sim.get_robot_blk_states()
+        else:
+            return self._robot_state, self._obj_states
 
-    def teleport_obj(self, obj_id, x, y):
-        self._obj_states[id, :] = np.array([x, y])
+    def apply_action(self, action): #TODO Steven calculate based on current heading
+        """
+        Move robot using a forward/backward motion and rotation.
+        :param action: size 2 tuple of the (d, theta) movement to apply to the robot
+        """
+        if self.use_simulator:
+            self.sim.apply_action(action)
+        else:
+            translation = action[0]
+            delta_theta = action[1]
+            rob_state = self.get_robot_state()
+            theta = rob_state[-1]# + delta_theta, #TODO check with Alex whether to move then rotate or rotate then move
+            delta_x = translation * np.cos(theta)
+            delta_y = translation * np.sin(theta)
+            self._robot_state += np.array([delta_x, delta_y, delta_theta]).reshape(1,3)
 
-    def move_robot(self, delta_x, delta_y, delta_theta): #TODO Steven calculate based on current heading
-        self._robot_state += np.array([delta_x, delta_y, delta_theta]).reshape(1,3)
+    def set_obj_state(self, obj_id, x, y):
+        """
+        Set the state of a single object in the simulator
+        :param obj_id: int that represents the array index of the desired object
+        :param x: the x position of the object as a float
+        :param y: the y position of the object as a float
+        """
+        if self.use_simulator:
+            robot_state, obj_states = self.sim.get_robot_blk_states()
+            obj_states[obj_id,:] = np.array([x,y])
+            self.sim.set_robot_blk_states(robot_state, obj_states)
+        else:
+            self._obj_states[obj_id, :] = np.array([x, y])
 
-    def teleport_robot(self, x, y, theta):
-        self._robot_state = np.array([x, y, theta]).reshape(1,3)
+    def set_obj_states(self, poses):
+        """
+        Set the states of all the objects in the simulator       
+        :param poses: (Nx2) np.array of the [(x, y)] poses of the objects
+        """
+        if self.use_simulator:
+            robot_state, obj_states = self.sim.get_robot_blk_states()
+            obj_states = poses
+            self.sim.set_robot_blk_states(robot_state, obj_states)
+        else:
+            self._obj_states = poses
+
+    def set_robot_state(self, x, y, theta):
+        """
+        Set (x,y) position and orientation of robot
+        :param x: the desired x position of the robot as a float
+        :param y: the desired y position of the robot as a float
+        :param theta: the desired orientation of the object as a float
+        """
+        if self.use_simulator:
+            robot_state, obj_states = self.sim.get_robot_blk_states()
+            robot_state = np.array([x,y,theta])
+            self.sim.set_robot_blk_states(robot_state, obj_states)
+        else:
+            self._robot_state = np.array([x, y, theta]).reshape(1,2)
+
+    def set_state(self, robot_state, obj_states):
+        """
+        Set the states of the robot and objects
+        :param robot_state: np.array of the (x,y,theta) state of the robot
+        :param poses: (Nx2) np.array of the [(x, y)] poses of the objects
+        """
+        if self.use_simulator:
+            state = np.concatenate((robot_state, obj_states.flat))
+            self.sim.set_state(state)
+        else:
+            self._robot_state = robot_state
+            self._obj_states = obj_states
 
     def get_robot_bbox(self):
         """
@@ -103,7 +167,7 @@ class Scene:
                          center - v1 - v2,
                          center + v1 - v2])
 
-    def robot_in_collision(self, threshold=1e-2):
+    def is_free_space_motion(self, threshold=1e-2):
         """
         Return True if the robot is close to being in collision with an object.
         Ref: https://hackmd.io/@US4ofdv7Sq2GRdxti381_A/ryFmIZrsl?type=view 
@@ -124,7 +188,7 @@ class Scene:
 
                 # TODO change the way to get vertices below when shapes aren't circles
                 # TODO can get bbox around circle that is aligned with robot if this is too slow
-                obj_vertices = get_circle_bbox(self._obj_states[obj_id], self._obj_dims[obj_id])
+                obj_vertices = get_circle_bbox(self._obj_states[obj_id], self._obj_dims)
                 edges = get_edges(obj_vertices)
                 
                 robot_vertices = self.get_robot_bbox()
