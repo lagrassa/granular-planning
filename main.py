@@ -70,7 +70,13 @@ while True:
     plan = astar.A_star(g)
     if len(plan) > 0:
         print("Plan created: {}".format(plan))
-        # world.set_state(simState)
-        # for a in plan:
-        #     world.apply_action(a)
+        world.set_state(simState)
+        world.apply_action([0, 0, 0])
+        for a in plan:
+            ipdb.set_trace()
+            world.apply_action(a)
+            world.set_state(world.get_state())
+        world.apply_action([0, 0, 0])
+        world.set_state(world.get_state())
+        ipdb.set_trace()
         break

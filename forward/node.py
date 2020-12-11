@@ -18,6 +18,7 @@ class Node:
         self.robotState = robotState
         self.envState = envState
         self.parentId = -1
+        self.parentActionId = -1
         self.weight = 100.0
 
     @property
@@ -121,7 +122,7 @@ class Graph:
     def getSuccessors(self, vertexID):
         """ Call functions from transition model
         """
-        successors = set()
+        successors = []
         node = self.vertices[vertexID]
         simState = self.graphStateToSimState(node)
         for action in range(self.numActions):
@@ -134,7 +135,7 @@ class Graph:
             # print("simRobotState=", simState[:3], simRobotState, action)
             # ipdb.set_trace()
             graphRobotState, graphBlkStates = self.simStateToGraphState(simRobotState, simBlkStates)
-            successors.add(self.addVertex(graphRobotState, graphBlkStates))
+            successors.append(self.addVertex(graphRobotState, graphBlkStates))
         return successors
 
     def diagDistance(self, node, targets):
