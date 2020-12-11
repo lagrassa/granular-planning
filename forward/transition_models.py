@@ -17,7 +17,9 @@ def transition_model(state, action, simulator):
     :param simulator instance
     :return:
     """
-    pass
+    if collision_free_action(state, action):
+        return _free_space_transition_model(state, action)
+    return _with_blocks_transition_model(state, action, simulator)
 
 def _free_space_transition_model(state, action):
     """
@@ -38,7 +40,14 @@ def _with_blocks_transition_model(state, action, simulator):
     """
     simulator.set_state(state)
     simulator.apply_action(action)
-    return simulator.get_state()
+    simRobotState, simBlkStates = simulator.get_robot_blk_states()
+    return simRobotState, simBlkStates
+
+def collision_free_action(state, action):
+    """
+    Predicts whether there will be a collision by applying action to state
+    """
+    return False
 
 
 def parseAction(graphAction, graphHeading, stepXY, stepTheta):
