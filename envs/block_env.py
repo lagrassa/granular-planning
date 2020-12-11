@@ -88,26 +88,33 @@ class Simulator:
         """
         state = np.concat((rState, bStates.flat))
         return self.set_state(state)
-
-    def apply_action(self, action):
+    def apply_action(self, action, show_error=False):
         """
         Applies action to environment and then simulates it
+        (d, theta), but only one value can be nonzero
         :param action:
         :return:
-
-        TODO change action type
         """
         #tune these parameters to make the physics easy
-        delta_yaw = action[2]
+        assert (not action[0] or not action[1])
+        delta_yaw = action[1]
         cur_q = ut.get_joint_positions(self.robot, (0,1,2))
-        des_pos = (cur_q[0]+action[0], cur_q[1]+action[1])
         cur_theta = cur_q[2]
-        #des_quat = ut.quat_from_euler([0,0,cur_theta+delta_yaw])
         des_theta = cur_theta+delta_yaw
+        ref = np.pi/2.
+        delta_x = action[0]*np.cos(ref+cur_theta)
+        delta_y = action[0]*np.sin(ref+cur_theta)
+
+        des_pos = (cur_q[0]+delta_x, cur_q[1]+delta_y)
+        #des_quat = ut.quat_from_euler([0,0,cur_theta+delta_yaw])
         #p.changeConstraint(self.cid, des_pos, des_quat, maxForce=self.force)
         duration = 1
         self.set_motors(des_pos, des_theta)
         ut.simulate_for_duration(duration)
+        if show_error:
+            cur_q = ut.get_joint_positions(self.robot, (0,1,2))
+            print("pos error:", np.linalg.norm(np.array(cur_q[:2])-np.array(des_pos)))
+            print("angle error:", np.linalg.norm(cur_q[2]-des_theta))
 
     def get_state(self):
         """
