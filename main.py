@@ -75,8 +75,6 @@ while True:
         for a in plan:
             ipdb.set_trace()
             world.apply_action(a)
-            world.set_state(world.get_state())
         world.apply_action([0, 0, 0])
-        world.set_state(world.get_state())
         ipdb.set_trace()
         break
