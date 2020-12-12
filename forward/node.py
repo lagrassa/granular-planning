@@ -208,7 +208,7 @@ class Graph:
             else:
                 d1 += node.robotState[1] != node.envState[blkId][1]
 
-            node.h += 10 * d1
+            node.h += d1
         else:
             raise ValueError('Distance metric not supported: {}'.format(self.heuristicAlg))
 
