@@ -1,7 +1,8 @@
 import numpy as np
 import ipdb
 
-from .transition_models import parseAction, transition_model
+from .transition_models import parseAction, transition_model, parseActionDTheta
+from .state import State
 from scipy.spatial import ConvexHull
 from scipy.spatial.qhull import QhullError
 

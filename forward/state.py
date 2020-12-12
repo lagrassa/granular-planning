@@ -12,12 +12,12 @@ class State:
 
         self._robot_state, self._obj_states = self.sim.get_robot_blk_states()
 
-        if robot_dims is None:
+        if robot_dims is not None:
             self._robot_dims = robot_dims
         else:
             # TODO check that this is width, height not height width
             self._robot_dims = np.array([0.8, 0.1])
-        if obj_dims is None:
+        if obj_dims is not None:
             self._obj_dims = obj_dims
         else:
             # TODO update this whenever we make changes to blocks
@@ -26,7 +26,7 @@ class State:
         # assert self._obj_states.shape[0] == self._obj_dims.shape[0]
         
         # TODO need to update this everytime you add an object, assuming state is defined at obj/robot center
-        self.check_distance = np.max(robot_dims) / 2 + np.max(obj_dims) / 2
+        self.check_distance = np.max(self._robot_dims) / 2 + np.max(self._obj_dims) / 2
 
     def get_obj_state(self, obj_id):
         """
@@ -78,7 +78,7 @@ class State:
         else:
             return self._robot_state, self._obj_states
 
-    def apply_action(self, action): #TODO Steven calculate based on current heading
+    def apply_action(self, action):
         """
         Move robot using a forward/backward motion and rotation.
         :param action: size 2 tuple of the (d, theta) movement to apply to the robot
@@ -89,10 +89,10 @@ class State:
             translation = action[0]
             delta_theta = action[1]
             rob_state = self.get_robot_state()
-            theta = rob_state[-1]# + delta_theta, #TODO check with Alex whether to move then rotate or rotate then move
+            theta = rob_state[-1]
             delta_x = translation * np.cos(theta)
             delta_y = translation * np.sin(theta)
-            self._robot_state += np.array([delta_x, delta_y, delta_theta]).reshape(1,3)
+            self._robot_state += np.array([delta_x, delta_y, delta_theta]).reshape(3)
 
     def set_obj_state(self, obj_id, x, y):
         """
@@ -132,7 +132,7 @@ class State:
             robot_state = np.array([x,y,theta])
             self.sim.set_robot_blk_states(robot_state, obj_states)
         else:
-            self._robot_state = np.array([x, y, theta]).reshape(1,2)
+            self._robot_state = np.array([x, y, theta]).reshape(3)
 
     def set_state(self, robot_state, obj_states):
         """
@@ -197,7 +197,7 @@ class State:
                 normals = [orthog_vec(edge) for edge in edges]
 
                 for normal in normals:
-                    if(is_seperated(normal, robot_vertices, obj_vertices)):
+                    if(is_seperated(normal, robot_vertices, obj_vertices, threshold=threshold)):
                         in_collision = False
                         break
                 
@@ -215,10 +215,10 @@ class State:
         """
         Return the object ID's of the objects within possible collision distance to the robot.
         """
-        dist = np.linalg.norm(self._robot_state[:-1].reshape(2,1) - self._obj_states, axis=0)
+        dist = np.linalg.norm(self._robot_state[:-1].reshape(1,2) - self._obj_states, axis=0)
         sorted_obj_ids = np.argsort(dist)
         idx = np.argmax(dist[sorted_obj_ids] >= (self.check_distance-threshold))
-        obj_ids = obj_ids[:idx]
+        obj_ids = sorted_obj_ids[:idx]
         return obj_ids, dist[obj_ids]
 
 
@@ -254,13 +254,13 @@ def is_seperated(normal, vertices1, vertices2, threshold=1e-2):
     max2 = -np.inf
 
     for v in vertices1:
-        proj = np.dot(v, o)
+        proj = np.dot(v, normal)
 
         min1 = min(min1, proj)
         max1 = max(max1, proj)
 
     for v in vertices2:
-        proj = np.dot(v, o)
+        proj = np.dot(v, normal)
 
         min2 = min(min2, proj)
         max2 = max(max2, proj)
