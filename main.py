@@ -35,7 +35,7 @@ goal_size = 0.5
 
 world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
 robot_state = [0, 0.5, 0.0]
-box_states = [0.3, 0, 0, 0.3]
+box_states = [0.6, 0, 0, 0.6]
 state = np.hstack([robot_state, box_states])
 world.set_state(state)
 obs = world.get_state()
