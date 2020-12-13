@@ -28,7 +28,7 @@ def ComputePath(OPEN, graph):
 
 		successors = graph.getSuccessors(vertexID)
 		# ipdb.set_trace()
-		print("Expanding:{}, g={}, h={}".format(S.robotState, S.g, S.h))
+		print("Expanding:{}, g={}, h={}, f={}".format(S.robotState, S.g, S.h, S.f))
 		# ipdb.set_trace()
 		for act, s_prime in enumerate(successors):
 			if s_prime not in CLOSED:

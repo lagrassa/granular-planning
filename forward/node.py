@@ -190,25 +190,26 @@ class Graph:
             node.h = np.sum(min_d8)
 
             # 2. kinematic heuristic
-            blkId = np.argmax(min_d8)
-            node.h += np.sum(np.abs(node.envState[blkId] - node.robotState[:2]))
+            if node.h > 0:
+                blkId = np.argmax(min_d8)
+                node.h += np.sum(np.abs(node.envState[blkId] - node.robotState[:2]))
 
-            d1 = 0
-            if node.envState[blkId][0] > 0:
-                d1 += node.robotState[0] < node.envState[blkId][0]
-            elif node.envState[blkId][0] < 0:
-                d1 += node.robotState[0] > node.envState[blkId][0]
-            else:
-                d1 += node.robotState[0] != node.envState[blkId][0]
+                d1 = 0
+                if node.envState[blkId][0] > 0:
+                    d1 += node.robotState[0] < node.envState[blkId][0]
+                elif node.envState[blkId][0] < 0:
+                    d1 += node.robotState[0] > node.envState[blkId][0]
+                else:
+                    d1 += node.robotState[0] != node.envState[blkId][0]
 
-            if node.envState[blkId][1] > 0:
-                d1 += node.robotState[1] < node.envState[blkId][1]
-            elif node.envState[blkId][1] > 0:
-                d1 += node.robotState[1] > node.envState[blkId][1]
-            else:
-                d1 += node.robotState[1] != node.envState[blkId][1]
+                if node.envState[blkId][1] > 0:
+                    d1 += node.robotState[1] < node.envState[blkId][1]
+                elif node.envState[blkId][1] > 0:
+                    d1 += node.robotState[1] > node.envState[blkId][1]
+                else:
+                    d1 += node.robotState[1] != node.envState[blkId][1]
 
-            node.h += d1
+                node.h += d1
         else:
             raise ValueError('Distance metric not supported: {}'.format(self.heuristicAlg))
 
