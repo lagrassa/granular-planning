@@ -72,10 +72,10 @@ while True:
     if len(plan) > 0:
         print("Plan created: {}".format(plan))
         world.set_state(init_state)
-        world.apply_action([0, 0, 0])
+        world.apply_action([0, 0])
+        ipdb.set_trace()
         for a in plan:
-            ipdb.set_trace()
             world.apply_action(a)
-        world.apply_action([0, 0, 0])
+        world.apply_action([0, 0])
         ipdb.set_trace()
         break

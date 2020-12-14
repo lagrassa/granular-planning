@@ -17,6 +17,7 @@ class Simulator:
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setTimeStep(1/100.)
         scaling = 10
+        self.num_uses = 0
         self.pusher_length = 0.1*scaling
         self.pusher_width = 0.01*scaling
         self.box_width = 0.01*scaling
@@ -62,7 +63,7 @@ class Simulator:
         blocks = [left_box, right_box, top_box, bottom_box]
         [p.changeDynamics(block, -1, restitution=0.98, lateralFriction=0.99) for block in blocks]
 
-    def set_state(self, state, debug=False):
+    def set_state(self, state, debug=True):
         """
         Given planner state, sets the simulator state to reflect that by teleporting
         :param state:
@@ -80,10 +81,16 @@ class Simulator:
                 new_h = self.height*0.5 - self.plane_height * (i + 1)
             else:
                 new_h = self.height*0.5
-            ut.set_point(self.boxes[i], np.hstack([box_pose, new_h]))
+            new_pos = np.hstack([box_pose, new_h])
+            ut.set_pose(self.boxes[i], (new_pos, (1,0,0,0)) )
         self.set_motors(robot_pos, robot_orn)
         if debug:
             assert np.allclose(state, self.get_state())
+            orn = ut.get_pose(self.robot)[1]
+            euler = ut.euler_from_quat(orn)
+            if (euler[0] or euler[1] or euler[2]):
+                import ipdb; ipdb.set_trace()
+            
         #p.changeConstraint(self.cid, robot_pos, quat, maxForce=100)
 
     def set_robot_blk_states(self, rState, bStates):
@@ -102,7 +109,7 @@ class Simulator:
         :return:
         """
         #tune these parameters to make the physics easy
-        print(action)
+        self.num_uses +=1 
         assert (not action[0] or not action[1])
         delta_yaw = action[1]
         cur_q = ut.get_joint_positions(self.robot, (0,1,2))
@@ -111,7 +118,6 @@ class Simulator:
         ref = np.pi/2.
         delta_x = action[0]*np.cos(ref+cur_theta)
         delta_y = action[0]*np.sin(ref+cur_theta)
-
         des_pos = (cur_q[0]+delta_x, cur_q[1]+delta_y)
         #des_quat = ut.quat_from_euler([0,0,cur_theta+delta_yaw])
         #p.changeConstraint(self.cid, des_pos, des_quat, maxForce=self.force)
