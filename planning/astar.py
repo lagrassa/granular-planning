@@ -28,7 +28,8 @@ def ComputePath(OPEN, graph):
 
 		successors = graph.getSuccessors(vertexID)
 		# ipdb.set_trace()
-		print(vertexID, S.robotState, S.g, S.h)
+		print("Expanding:{}, g={}, h={}, f={}".format(S.robotState, S.g, S.h, S.f))
+		# ipdb.set_trace()
 		for act, s_prime in enumerate(successors):
 			if s_prime not in CLOSED:
 				SNode = graph.getNode(s_prime)
@@ -37,7 +38,7 @@ def ComputePath(OPEN, graph):
 					SNode.g = S.g + cost
 					SNode.parentId = vertexID
 					SNode.parentActionId = act
-					print("New path", act, S.robotState, SNode.robotState)
+					# print("New path", act, S.robotState, SNode.robotState)
 					heapq.heappush(OPEN, (SNode.f, s_prime))
 	return plan
 
