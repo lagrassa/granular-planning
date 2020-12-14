@@ -35,8 +35,9 @@ goal_size = 0.5
 
 world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
 robot_state = [0, 0.5, 0.0]
-box_states = [0.6, 0, 0, 0.6]
+box_states = [0.3, 0, 0, 0.3]
 state = np.hstack([robot_state, box_states])
+init_state = state.copy()
 world.set_state(state)
 obs = world.get_state()
 assert(np.allclose(state, obs))
@@ -70,7 +71,7 @@ while True:
     plan = astar.A_star(g)
     if len(plan) > 0:
         print("Plan created: {}".format(plan))
-        world.set_state(simState)
+        world.set_state(init_state)
         world.apply_action([0, 0, 0])
         for a in plan:
             ipdb.set_trace()

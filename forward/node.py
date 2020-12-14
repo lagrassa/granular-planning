@@ -1,7 +1,7 @@
 import numpy as np
 import ipdb
 
-from .transition_models import parseAction, transition_model
+from .transition_models import parseAction, transition_model, parseActionDTheta
 from scipy.spatial import ConvexHull
 from scipy.spatial.qhull import QhullError
 
@@ -126,7 +126,8 @@ class Graph:
         node = self.vertices[vertexID]
         simState = self.graphStateToSimState(node)
         for action in range(self.numActions):
-            simAction = parseAction(action, node.robotState[-1], self.stepXY, self.stepTheta)
+            #simAction = parseAction(action, node.robotState[-1], self.stepXY, self.stepTheta)
+            simAction = parseActionDTheta(action, self.stepXY, self.stepTheta) #uses new sim representation
             simRobotState, simBlkStates = transition_model(simState, simAction, self.world) 
             # graph and sim have different representation for action
             # print("simRobotState=", simState[:3], simRobotState, action)
