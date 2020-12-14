@@ -15,6 +15,7 @@ class Simulator:
 
         self.workspace_size = workspace_size
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        p.setTimeStep(1/100.)
         scaling = 10
         self.pusher_length = 0.1*scaling
         self.pusher_width = 0.01*scaling
@@ -33,7 +34,7 @@ class Simulator:
         self.setup_hole()
         self.box_pose_idx = 3
         #self.cid = p.createConstraint(self.robot, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
-        self.force = 30.0#0.2
+        self.force = 20.0#0.2
 
     def set_motors(self, robot_pos, theta):
         maxVel = 1
@@ -61,7 +62,7 @@ class Simulator:
         blocks = [left_box, right_box, top_box, bottom_box]
         [p.changeDynamics(block, -1, restitution=0.98, lateralFriction=0.99) for block in blocks]
 
-    def set_state(self, state):
+    def set_state(self, state, debug=False):
         """
         Given planner state, sets the simulator state to reflect that by teleporting
         :param state:
@@ -81,6 +82,8 @@ class Simulator:
                 new_h = self.height*0.5
             ut.set_point(self.boxes[i], np.hstack([box_pose, new_h]))
         self.set_motors(robot_pos, robot_orn)
+        if debug:
+            assert np.allclose(state, self.get_state())
         #p.changeConstraint(self.cid, robot_pos, quat, maxForce=100)
 
     def set_robot_blk_states(self, rState, bStates):
@@ -99,6 +102,7 @@ class Simulator:
         :return:
         """
         #tune these parameters to make the physics easy
+        print(action)
         assert (not action[0] or not action[1])
         delta_yaw = action[1]
         cur_q = ut.get_joint_positions(self.robot, (0,1,2))
@@ -151,9 +155,16 @@ if __name__ == "__main__":
     world.set_state(state)
     obs = world.get_state()
     assert(np.allclose(state, obs))
-    import ipdb; ipdb.set_trace()
     world.apply_action([0,0.1])
     world.apply_action([0.1, 0])
     world.apply_action([-0.1,0])
-    print("Test passed")
+
+
+    robot_state = [0, 0.5, 0.0]
+    box_states = [0.6, 0, 0, 0.6]
+    state = np.hstack([robot_state,box_states])
+    world.set_state(state)
+    import ipdb; ipdb.set_trace()
+    world.apply_action([0,0.1])
+
 
