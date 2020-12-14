@@ -152,5 +152,9 @@ if __name__ == "__main__":
     world.apply_action(shift_y)
     world.apply_action(shift_y)
     world.apply_action(shift_y)
+    test_state = world.get_state()
+    world.set_state(test_state)
+    end_state = world.get_state()
+    assert(np.allclose(test_state, end_state))
     print("Test passed")
 
