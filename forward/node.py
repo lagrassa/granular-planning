@@ -162,20 +162,24 @@ class Graph:
         node = self.vertices[vertexID]
         parentRobotState, parentBlockStates = self.graphStateToSimState(node)
         simState = State(self.world) 
+        free_motion_count = 0
+        total_transitions = 0
         # iterate through all actions and apply to parent state
         for action_type in range(self.numActions):
             simAction = parseActionDTheta(action_type, self.stepXY, self.stepTheta)
             # apply action
-            simRobotState, simBlkStates = transition_model(simState,
+            simRobotState, simBlkStates, count = transition_model(simState,
                                                            parentRobotState,
                                                            parentBlockStates,
                                                            simAction,
                                                            threshold=self.collisionThresh,
                                                            sim_flag=False)
+            free_motion_count += count
+            total_transitions += 1
             # convert back to graph state format
             graphRobotState, graphBlkStates = self.simStateToGraphState(simRobotState, simBlkStates)
             successors.append(self.addVertex(graphRobotState, graphBlkStates))
-        return successors
+        return successors, free_motion_count, total_transitions
 
     def diagDistance(self, node, targets):
         # The maximum diagonal distance of any ball to its nearest hole

@@ -79,10 +79,19 @@ class State:
         """
         Get the (x,y,theta) state of the robot and the Nx2 array of the (x,y) states of the objects
         """
+        # rsim, bsim = self.sim.get_robot_blk_states()
+        # rstate, bstate = self._robot_state, self._obj_states
+        
+        # if not np.array_equal(rstate, rsim) or not np.array_equal(bstate, bsim.all):
+        #     import ipdb; ipdb.set_trace()
+        
         if self.use_simulator:
             return self.sim.get_robot_blk_states()
         else:
             return self._robot_state, self._obj_states
+
+        # robot_state, block_states = self.sim.get_robot_blk_states()
+        # return robot_state, block_states
 
     def apply_action(self, action):
         """
@@ -92,12 +101,14 @@ class State:
         if self.use_simulator:
             self.sim.apply_action(action)
         else:
+            #TODO fix the tracking of sim vs non sim
             rob_state = self.get_robot_state()
             theta = rob_state[2]
             delta_x = action[0] * np.cos(self._ref_rot + theta)
             delta_y = action[0] * np.sin(self._ref_rot + theta)
             self._robot_state += np.array([delta_x, delta_y, action[1]]).reshape(3)
 
+#TODO having the sim and free space both set defeats the purpose of the freespace motion model
     def set_obj_state(self, obj_id, x, y):
         """
         Set the state of a single object in the simulator
@@ -105,24 +116,24 @@ class State:
         :param x: the x position of the object as a float
         :param y: the y position of the object as a float
         """
-        if self.use_simulator:
-            robot_state, obj_states = self.sim.get_robot_blk_states()
-            obj_states[obj_id,:] = np.array([x,y])
-            self.sim.set_robot_blk_states(robot_state, obj_states)
-        else:
-            self._obj_states[obj_id, :] = np.array([x, y])
+        # set simulator transition model state           
+        robot_state, obj_states = self.sim.get_robot_blk_states()
+        obj_states[obj_id,:] = np.array([x,y])
+        self.sim.set_robot_blk_states(robot_state, obj_states)
+        # set free space motion transition model state                      
+        self._obj_states[obj_id, :] = np.array([x, y])
 
     def set_obj_states(self, poses):
         """
         Set the states of all the objects in the simulator       
         :param poses: (Nx2) np.array of the [(x, y)] poses of the objects
         """
-        if self.use_simulator:
-            robot_state, obj_states = self.sim.get_robot_blk_states()
-            obj_states = poses
-            self.sim.set_robot_blk_states(robot_state, obj_states)
-        else:
-            self._obj_states = poses.copy()
+         # set simulator transition model state           
+        robot_state, obj_states = self.sim.get_robot_blk_states()
+        obj_states = poses.copy()
+        self.sim.set_robot_blk_states(robot_state, obj_states)
+         # set free space motion transition model state           
+        self._obj_states = poses.copy()
 
     def set_robot_state(self, x, y, theta):
         """
@@ -131,12 +142,12 @@ class State:
         :param y: the desired y position of the robot as a float
         :param theta: the desired orientation of the object as a float
         """
-        if self.use_simulator:
-            robot_state, obj_states = self.sim.get_robot_blk_states()
-            robot_state = np.array([x,y,theta])
-            self.sim.set_robot_blk_states(robot_state, obj_states)
-        else:
-            self._robot_state = np.array([x, y, theta]).reshape(3)
+         # set simulator transition model state        
+        robot_state, obj_states = self.sim.get_robot_blk_states()
+        robot_state = np.array([x,y,theta])
+        self.sim.set_robot_blk_states(robot_state, obj_states)
+        # set free space motion transition model state
+        self._robot_state = np.array([x, y, theta]).reshape(3)
 
     def set_state(self, robot_state, obj_states):
         """

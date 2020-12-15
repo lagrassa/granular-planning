@@ -80,6 +80,8 @@ goal = [0,0,goal_size, goal_size]
 g = Graph(goal_discrete, plan_world, step_xy, step_theta,goal, cyl_radius=0.05, numActions=4, heuristicAlg='sum', collisionThresh=1e-3)
 
 numPlans = 0
+free_motion_count = 0
+total_transitions = 0
 while True:
     # Not sure whether we could reuse the graph
     g.reset()
@@ -93,7 +95,9 @@ while True:
     g.getNode(0).g = 0
 
     # A star
-    plan_actions, plan_states = astar.A_star(g)
+    plan_actions, plan_states, fm_count, tt = astar.A_star(g)
+    free_motion_count += fm_count
+    total_transitions += tt
     plan_world.close()
     world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
     
@@ -139,5 +143,5 @@ while True:
             init_state[2] %= np.pi
             plan_world.set_state(init_state)
             
-
+print(f"Number of free space transitions: {free_motion_count} out of {total_transitions}")
 print(f"Total time taken: {time.time() - start:.5f}s")
