@@ -126,7 +126,7 @@ class Graph:
         qs[:2] = np.round(robotState[:2] / self.stepXY)
         qs[2] = np.round(robotState[2] / self.stepTheta)
         # make heading index non negative
-        qs[2] = qs[2] % ((np.pi + 1e-6) // self.stepTheta)
+        qs[2] = qs[2] % ((2 * np.pi + 1e-6) // self.stepTheta)
         return qs.astype(np.int)
 
     def quantBlockStates(self, blockStates):

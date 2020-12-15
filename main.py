@@ -16,7 +16,7 @@ def quantRobotState(robotState, xyStep, thetaStep):
     qs[:2] = np.round(robotState[:2] / xyStep)
     qs[2] = np.round(robotState[2] / thetaStep)
     # avoid negative heading index
-    qs[2] = qs[2] % ((np.pi + 1e-6) // thetaStep)
+    qs[2] = qs[2] % ((2 * np.pi + 1e-6) // thetaStep)
     return qs.astype(np.int)
 
 
@@ -151,6 +151,11 @@ while True:
             print("Re-planning...{}".format(world.get_state()[:3]))
             init_state = np.copy(world.get_state())
             init_state[2] %= 2 * np.pi
+
+            if init_state[2] >= np.pi:
+                init_state[2] -= 2 * np.pi
+            if init_state[2] <= -np.pi:
+                init_state[2] += 2 * np.pi
             world.close()
             plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
             plan_world.set_state(init_state)
