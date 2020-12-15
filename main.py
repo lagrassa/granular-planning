@@ -38,6 +38,13 @@ def isGoalSim(blockStates, goalRect):
             break
     return isGoal
 
+def robotPosDiff(pos1, pos2):
+    diff = pos1 - pos2
+    diff[2] = pos1[2] % np.pi - pos2[2] % np.pi
+    if diff[2] >= np.pi / 2:
+        diff[2] -= np.pi
+    return diff
+
 
 # Set up the simulator
 # workspace top left =      [-workspace_size/2, +workspace_size/2]
@@ -51,7 +58,7 @@ goal_size = 0.5
 
 plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
 robot_state = [0, 0.5, 0.0]
-box_states = [0.6, 0, 0, 0.6]
+box_states = [0.3, 0, 0, 0.3]
 state = np.hstack([robot_state, box_states])
 init_state = state.copy()
 plan_world.set_state(state)
@@ -94,12 +101,12 @@ while True:
         world.set_state(init_state)
         world.apply_action([0, 0])
         curr_state = init_state
-        import ipdb; ipdb.set_trace()
+        ipdb.set_trace()
         for a, state in zip(plan_actions, plan_states):
             #world.set_state(curr_state)
             world.apply_action(a)
-            print("Robot error", np.linalg.norm(world.get_state()[:3]-curr_state[:3]))
-            print("Block error", np.linalg.norm(world.get_state()[3:]-curr_state[3:]))
+            print("Robot error", np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3])))
+            print("Block error", np.linalg.norm(world.get_state()[3:]-state[3:]))
             curr_state = state
             time.sleep(0.2)
         for i in range(4):
@@ -107,6 +114,7 @@ while True:
         ipdb.set_trace()
         if isGoalSim(world.get_state()[3:].reshape((-1, 2)), 
             [-goal_size/2, +goal_size/2, -goal_size/2, +goal_size/2]):
+            print("Goal reached...")
             break
         else:
             print("Re-planning...")
