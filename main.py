@@ -16,7 +16,7 @@ def quantRobotState(robotState, xyStep, thetaStep):
     qs[:2] = np.round(robotState[:2] / xyStep)
     qs[2] = np.round(robotState[2] / thetaStep)
     # avoid negative heading index
-    qs[2] = qs[2] % ((np.pi + 1e-6) // thetaStep)
+    qs[2] = qs[2] % ((2 * np.pi + 1e-6) // thetaStep)
     return qs.astype(np.int)
 
 
@@ -40,9 +40,11 @@ def isGoalSim(blockStates, goalRect):
 
 def robotPosDiff(pos1, pos2):
     diff = pos1 - pos2
-    diff[2] = pos1[2] % np.pi - pos2[2] % np.pi
-    if diff[2] >= np.pi / 2:
-        diff[2] -= np.pi
+    diff[2] = pos1[2] % (2 * np.pi) - pos2[2] % (2 * np.pi)
+    if diff[2] >= np.pi:
+        diff[2] -= 2 * np.pi
+    if diff[2] <= np.pi:
+        diff[2] += 2 * np.pi
     return diff
 
 
@@ -146,7 +148,7 @@ while True:
         else:
             print("Re-planning...{}".format(world.get_state()[:3]))
             init_state = np.copy(world.get_state())
-            init_state[2] %= np.pi
+            init_state[2] %= 2 * np.pi
             world.close()
             plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
             plan_world.set_state(init_state)
