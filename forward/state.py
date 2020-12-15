@@ -1,7 +1,6 @@
 import numpy as np
 from shapely.geometry import Point, box, Polygon
 from shapely.affinity import rotate
-import matplotlib.pyplot as plt
 
 class State:
     def __init__(self, simulator, robot_dims=None, obj_dims=None):
@@ -22,6 +21,8 @@ class State:
         else:
             # TODO check that this is width, height not height width
             self._robot_dims = np.array([0.8, 0.1])
+        self._robot_xdim = self._robot_dims[0]
+        self._robot_ydim = self._robot_dims[1]
         if obj_dims is not None:
             self._obj_dims = obj_dims
         else:
@@ -143,72 +144,43 @@ class State:
         :param robot_state: np.array of the (x,y,theta) state of the robot
         :param poses: (Nx2) np.array of the [(x, y)] poses of the objects
         """
-        # if self.use_simulator:
+        # set simulator transition model state
         state = np.concatenate((robot_state, obj_states.flat))
         self.sim.set_state(state)
-        # else:
+        # set free space motion transition model state
         self._robot_state = robot_state.copy()
         self._obj_states = obj_states.copy()
 
-    def get_robot_bbox(self):
+    def get_robot_bbox(self, thresh=1e-3):
         """
-        Return the four corners of the robot bounding box in CC order
+        Returns a shapely polygon of the robot bounding box.
         Ref: https://stackoverflow.com/a/56848101
         """
         x, y, theta = self.get_robot_state()
         center = np.array([x,y])
-        w = self._robot_dims[0]
-        h = self._robot_dims[1]
-        # import ipdb; ipdb.set_trace()
 
         v1 = np.array([np.cos(theta), np.sin(theta)])
         v2 = np.array([-v1[1], v1[0]]) # rotate by 90 degrees
 
-        v1 *= w / 2
-        v2 *= h / 2
-        return Polygon([tuple(center + v1 + v2),
-                         tuple(center - v1 + v2),
-                         tuple(center - v1 - v2),
-                         tuple(center + v1 - v2)])
-        # return bbox
+        v1 *= self._robot_xdim / 2
+        v2 *= self._robot_ydim / 2
+        return Polygon([tuple(center + v1 + v2 + [thresh, thresh]),
+                        tuple(center - v1 + v2 + [-thresh, thresh]),
+                        tuple(center - v1 - v2 + [-thresh, -thresh]),
+                        tuple(center + v1 - v2 + [thresh, -thresh])])
 
-        # return np.array([center + v1 + v2,
-        #                  center - v1 + v2,
-        #                  center - v1 - v2,
-        #                  center + v1 - v2])
-
-        # robot = box(x-w/2, y-h/2, x+w/2, y-h/2)
-        # return rotate(robot, theta*180/np.pi, 'center')
-
-    def is_free_space_motion(self, threshold=1e-2):
+    def is_free_space_motion(self, threshold=1e-3):
         """
         Return True if the robot is close to being in collision with an object.
-        Ref: https://hackmd.io/@US4ofdv7Sq2GRdxti381_A/ryFmIZrsl?type=view 
+        :param threshold: threshold to use for collision checking in meters
         """
-        # # Get all the objects that could possibly be in collision with robot
-        # nearest_objs, nearest_dist = self.get_nearest_blocks(threshold=threshold)
-        
-        # if nearest_objs.shape[0] == 0:
-        #     # return False if no objects are close to robot
-        #     self.use_simulator = False
-        #     return True
-        # # elif nearest_dist[0] <= np.min(self._robot_dims):
-        # #     return True
-        # else:
-        
-        robot_bbox = self.get_robot_bbox()
+        robot_bbox = self.get_robot_bbox(thresh=threshold)
         for i in range(self._obj_states.shape[0]):
             temp_state = self._obj_states[i]
+            # TODO change the way to get collision shape below when shapes aren't circles
             temp_point = Point(temp_state[0],temp_state[1])
             temp_circle = temp_point.buffer(self._obj_dims)
 
-
-            # fig, ax = plt.subplots()
-            # plt.plot(*robot_bbox.exterior.xy)
-            # plt.plot(*temp_circle.exterior.xy)
-            # ax.set_ylim(-1,1)
-            # ax.set_xlim(-1,1)
-            # plt.show()
             if robot_bbox.intersects(temp_circle):
                 self.use_simulator = True
                 return False
@@ -216,104 +188,14 @@ class State:
         self.use_simulator = False
         return True
 
-            # # check if any of the objects near robot are in collision
-            # in_collision = True # Assuming robot is in collision unless proven that it is not
-            # # d
-            # for i in range(nearest_objs.shape[0]):
-            #     obj_id = nearest_objs[i]
-
-            #     # TODO change the way to get vertices below when shapes aren't circles
-            #     # TODO can get bbox around circle that is aligned with robot if this is too slow
-            #     obj_vertices = get_circle_bbox(self._obj_states[obj_id], self._obj_dims)
-            #     edges = get_edges(obj_vertices)
-                
-            #     robot_vertices = self.get_robot_bbox()
-            #     edges += get_edges(robot_vertices)
-
-            #     normals = [orthog_vec(edge) for edge in edges]
-
-            #     for normal in normals:
-            #         if(is_seperated(normal, robot_vertices, obj_vertices, threshold=threshold)):
-            #             in_collision = False
-            #             break
-                
-            #     if in_collision:
-            #         self.use_simulator = True
-            #         return False
-            #     else:
-            #         in_collision = True
-
-            # self.use_simulator = False
-            # return True
-
-
     def get_nearest_blocks(self, threshold=1e-2):
         """
         Return the object ID's of the objects within possible collision distance to the robot.
+        #TODO I think there is a bug with this (Steven)
         """
-        # import ipdb; ipdb.set_trace()
         dist = np.linalg.norm(self._robot_state[:-1].reshape(1,2) - self._obj_states, axis=0)
         sorted_obj_ids = np.argsort(dist)
         idx = np.argmax(dist[sorted_obj_ids] >= (self.check_distance+threshold))
         obj_ids = sorted_obj_ids[:idx]
         return obj_ids, dist[obj_ids]
-
-
-def get_edges(vertices):
-    """
-    Return the vectors for the edges of a polygon
-    """
-    edges = []
-    for i in range(len(vertices)):
-        edge = vertices[(i+1)%len(vertices)] - vertices[i]
-        edges.append(edge)
-    return edges
-
-def orthog_vec(v):
-    """
-    Return a 90 degree clockwise rotation of a 2-D vector
-    """
-    return np.array([-v[1], v[0]])
-
-def is_seperated(normal, vertices1, vertices2, threshold=1e-2):
-    """
-    Return True if two polygons are separated along an axis that is orthogonal to a polygon edge.
-    Uses SAT to check if the projections of the polygons are in collision along the given normal vector.
-
-    :param normal: 2-D np.array (x,y) that represents a vector normal to the edge you are checking along.
-    :param vertices1: Nx2 np.array of the (x,y) positions of the vertices of first polygon in CC order.
-    :param vertices1: Nx2 np.array of the (x,y) positions of the vertices of second polygon in CC order.
-    :param threshold: a float of how much tolerance to give between the polygons to consider it in collision.
-    """
-    min1 = np.inf
-    min2 = np.inf
-    max1 = -np.inf
-    max2 = -np.inf
-
-    for v in vertices1:
-        proj = np.dot(v, normal)
-
-        min1 = min(min1, proj)
-        max1 = max(max1, proj)
-
-    for v in vertices2:
-        proj = np.dot(v, normal)
-
-        min2 = min(min2, proj)
-        max2 = max(max2, proj)
-
-    if (max1 - min2 >= -threshold) and (max2 - min1 >= -threshold):
-        return False
-    else:
-        return True
-
-def get_circle_bbox(position, radius):
-    """
-    Return the vertices of a x-axis/y-axis aligned bounding around a circle
-    """
-    return np.array([position + np.array([radius, radius]),
-                     position + np.array([-radius, radius]),
-                     position + np.array([-radius, -radius]),
-                     position + np.array([radius, -radius])]
-    )
 

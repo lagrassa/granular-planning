@@ -43,12 +43,15 @@ class Node:
 class Graph:
     """ Assume self.vertices[0] is start state
     """
-    def __init__(self, holePos, world, stepXY, stepTheta, numActions=4, heuristicAlg='8n'):
+    def __init__(self, holePos, world, stepXY, stepTheta, numActions=4,
+                 heuristicAlg='8n', collisionThresh=1e-3):
         """
         :param holePos: 2D Nx2 numpy array of [(x, y)], np.int
         :param world: simulator
         :param numActions: 0 forward, 1 backward, 2 rotate 45 degree clockwise, 
                             3 rotate 45 degree counter clockwise
+        :param heuristicAlg: string of the heuristic to use ('8n' or 'sum')
+        :param collisionThresh: threshold to use for collision checking in meters
         """
         self.vertices = []
         # Used to checked whether a vertex exists in implicit graph
@@ -62,6 +65,8 @@ class Graph:
 
         self.numActions = numActions
         self.heuristicAlg = heuristicAlg
+
+        self.collisionThresh = collisionThresh
 
     def reset(self):
         self.vertices = []
@@ -111,33 +116,38 @@ class Graph:
         return blockStates * self.stepXY
 
     def graphStateToSimState(self, n):
-        """ Inverse quantization
+        """
+        Inverse quantization
         """
         return self.iQuantRobotState(n.robotState), self.iQuantBlockStates(n.envState)
 
     def simStateToGraphState(self, rState, bStates):
+        """
+        Quantize robot state to graph state format
+        """
         return self.quantRobotState(rState), self.quantBlockStates(bStates)
 
     def getSuccessors(self, vertexID):
-        """ Call functions from transition model
+        """ 
+        Get succesors from transition model
         """
         successors = []
+        # Get the parent state representation
         node = self.vertices[vertexID]
         parentRobotState, parentBlockStates = self.graphStateToSimState(node)
-        simState = State(self.world) #TODO probably a better way to do this, instead of making a new obj every time
+        simState = State(self.world) 
+        # iterate through all actions and apply to parent state
         for action_type in range(self.numActions):
-            #simAction = parseAction(action, node.robotState[-1], self.stepXY, self.stepTheta)
-            simAction = parseActionDTheta(action_type, self.stepXY, self.stepTheta) #uses new sim representation
+            simAction = parseActionDTheta(action_type, self.stepXY, self.stepTheta)
+            # apply action
             simRobotState, simBlkStates = transition_model(simState,
                                                            parentRobotState,
                                                            parentBlockStates,
                                                            simAction,
-                                                           self.world,
-                                                           threshold=self.stepXY*10)
-            # graph and sim have different representation for action
-            # print("simRobotState=", simState[:3], simRobotState, action)
-            # ipdb.set_trace()
-            graphRobotState, graphBlkStates = self.simStateToGraphState(simRobotState, simBlkStates) #TODO convert back from Steven State
+                                                           threshold=self.collisionThresh,
+                                                           sim_flag=False)
+            # convert back to graph state format
+            graphRobotState, graphBlkStates = self.simStateToGraphState(simRobotState, simBlkStates)
             successors.append(self.addVertex(graphRobotState, graphBlkStates))
         return successors
 

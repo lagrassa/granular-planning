@@ -1,73 +1,31 @@
 import numpy as np
 
-def transition_model(state, robot_state, block_state, action, simulator, threshold):
+def transition_model(state, robot_state, block_state, action, threshold=1e-3, sim_flag=False):
     """
     Given current state and action return next state
     :param state: state.State object
     :param robot_state: parent (x,y,theta) state of the robot
     :param block_state: parent Nx2 array of the (x,y) states of the objects
     :param action: tuple of the forward/backward motion and rotation to apply to robot
-    :param simulator instance
-    :return:
+    :param threshold: threshold to use for collision checking in meters
+    :param sim_flag: set to True to always use simulator to get succesors
+    :return: 
+        robot state: (x,y,theta) state of the robot as np.array
+        object states: Nx2 array of the (x,y) states of the objects
     """
-    # import ipdb; ipdb.set_trace()
-    print(state.get_state())
     # set parent state
     state.set_state(robot_state, block_state)
     # check whether to use simulator for dynamics
-    status = state.is_free_space_motion(threshold=threshold)
-    # print(status)
-    # state.use_simulator = True
+    if not sim_flag:
+        status = state.is_free_space_motion(threshold=threshold)
+    else:
+        state.use_simulator=True
     # apply action
     state.apply_action(action)
-    # print(state.get_state())
-
-    # state.set_state(robot_state, block_state)
-    # # check whether to use simulator for dynamics
-    # # state.is_free_space_motion(threshold=threshold)
-    # state.use_simulator = False
-    # # apply action
-    # state.apply_action(action)
-    # print(state.get_state())
-    # import ipdb; ipdb.set_trace()
-
-    # state.set_state(robot_state, block_state)
-    # # check whether to use simulator for dynamics
-    # print(state.is_free_space_motion(threshold=threshold))
-    # # state.use_simulator = False
-    # # # apply action
-    # # state.apply_action(action)
-    # # print(state.get_state())
 
     # return successor
     return state.get_state()
 
-    # if is_free_space_motion(state, action):
-    #     return _free_space_transition_model(state, action)
-    # return _with_blocks_transition_model(state, action, simulator)
-
-# def _free_space_transition_model(state, action):
-#     """
-#     Determines next state, requires that this is a free space motion
-#     :param state:
-#     :param action:
-#     :return:
-#     """
-#     #TODO use StevenState
-#     pass
-
-# def _with_blocks_transition_model(state, action, simulator):
-#     """
-#     Using a simulator, returns the next state
-#     :param state:
-#     :param action:
-#     :param simulator:
-#     :return:
-#     """
-#     simulator.set_state(state) #TODO update to StevenState API
-#     simulator.apply_action(action)
-#     simRobotState, simBlkStates = simulator.get_robot_blk_states()
-#     return simRobotState, simBlkStates
 
 def parseActionDTheta(action_type, stepXY, stepTheta):
     """Inside a graph, there are 4 graph actions: 

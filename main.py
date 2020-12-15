@@ -54,7 +54,7 @@ numGoalCells = int((goal_size + 1e-6) // step_xy)
 goalCellOffset = numGoalCells // 2
 goalX, goalY = np.meshgrid(np.arange(numGoalCells) - goalCellOffset, np.arange(numGoalCells) - goalCellOffset)
 goal = np.stack([goalX.flat, goalY.flat], axis=1).astype(np.int)
-g = Graph(goal, world, step_xy, step_theta, numActions=4, heuristicAlg='sum')
+g = Graph(goal, world, step_xy, step_theta, numActions=4, heuristicAlg='sum', collisionThresh=1e-3)
 
 while True:
     # Not sure whether we could reuse the graph
