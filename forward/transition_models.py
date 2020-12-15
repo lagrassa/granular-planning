@@ -75,6 +75,24 @@ def parseActionDTheta(action_type, stepXY, stepTheta):
     else:
         raise ValueError("Invalid graphAction= {}".format(action_type))
 
+def parseActionDTheta(action_type, stepXY, stepTheta):
+    """Inside a graph, there are 4 graph actions:
+    0. move forward along heading direction
+    1. move backward along heading direction
+    2. roate clockwise
+    3. rotate counter clockwise
+    Changes to (d, theta) representation where d can be negative (indicating to move backward)
+    """
+    if action_type == 0:
+        return (stepXY, 0)
+    elif action_type == 1:
+        return (-stepXY, 0)
+    elif action_type == 2:
+        return (0, stepTheta)
+    elif action_type == 3:
+        return (0, -stepTheta)
+    else:
+        raise ValueError("Invalid graphAction= {}".format(action_type))
 
 def parseAction(graphAction, graphHeading, stepXY, stepTheta):
     """Inside a graph, there are 4 graph actions: 

@@ -33,12 +33,13 @@ def quantBlockStates(blockStates, step):
 workspace_size = 5
 goal_size = 0.5
 
-world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
+plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
 robot_state = [0, 0.5, 0.0]
 box_states = [0.6, 0, 0, 0.6]
 state = np.hstack([robot_state, box_states])
-world.set_state(state)
-obs = world.get_state()
+init_state = state.copy()
+plan_world.set_state(state)
+obs = plan_world.get_state()
 assert(np.allclose(state, obs))
 
 print("Simulator created")
@@ -51,15 +52,16 @@ step_theta = np.pi / 4
 numGoalCells = int((goal_size + 1e-6) // step_xy)
 goalCellOffset = numGoalCells // 2
 goalX, goalY = np.meshgrid(np.arange(numGoalCells) - goalCellOffset, np.arange(numGoalCells) - goalCellOffset)
-goal = np.stack([goalX.flat, goalY.flat], axis=1).astype(np.int)
-g = Graph(goal, world, step_xy, step_theta, numActions=4, heuristicAlg='sum')
+goal_discrete = np.stack([goalX.flat, goalY.flat], axis=1).astype(np.int)
+goal = [0,0,goal_size, goal_size]
+g = Graph(goal_discrete, plan_world, step_xy, step_theta,goal, cyl_radius=0.05, numActions=4, heuristicAlg='sum')
 
 while True:
     # Not sure whether we could reuse the graph
     g.reset()
 
-    robotState, blockStates = world.get_robot_blk_states()
-    simState = world.get_state()
+    robotState, blockStates = plan_world.get_robot_blk_states()
+    simState = plan_world.get_state()
     rState = quantRobotState(robotState, step_xy, step_theta)
     bStates = quantBlockStates(blockStates, step_xy)
     print("Robot:{}, blk:{}".format(rState, bStates))
@@ -67,14 +69,22 @@ while True:
     g.getNode(0).g = 0
 
     # A star
-    plan = astar.A_star(g)
-    if len(plan) > 0:
-        print("Plan created: {}".format(plan))
-        world.set_state(simState)
-        world.apply_action([0, 0, 0])
-        for a in plan:
-            ipdb.set_trace()
+    plan_actions, plan_states = astar.A_star(g)
+    plan_world.close()
+    world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
+    
+    if len(plan_actions) > 0:
+        print("Plan created: {}".format(plan_actions))
+        world.set_state(init_state)
+        world.apply_action([0, 0])
+        curr_state = init_state
+        for a, state in zip(plan_actions, plan_states):
+            world.set_state(curr_state)
             world.apply_action(a)
-        world.apply_action([0, 0, 0])
+            print("Robot error", np.linalg.norm(world.get_state()[:3]-curr_state[:3]))
+            print("Block error", np.linalg.norm(world.get_state()[3:]-curr_state[3:]))
+            curr_state = state
+        for i in range(4):
+            world.apply_action([0, 0]) #see if it falls
         ipdb.set_trace()
         break

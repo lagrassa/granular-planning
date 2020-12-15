@@ -17,7 +17,7 @@
 
     <joint name="prism_base_to_inter1" type="prismatic">
         <axis xyz="1 0 0" />
-        <limit effort="10.0" lower="-6.28" upper="6.28" velocity="3.5" />
+        <limit effort="1.0" lower="-6.28" upper="6.28" velocity="3.5" />
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <parent link="base_link"/>
         <child link="inter_link1"/>
@@ -53,7 +53,7 @@
 
     <joint name="revolute_inter2_to_paddle" type="revolute">
         <axis xyz="0 0 1" />
-        <limit effort="100.0" lower="-6.28" upper="6.28" velocity="30.5" />
+        <limit effort="1.0" lower="-6.28" upper="6.28" velocity="30.5" />
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <parent link="inter_link2"/>
         <child link="paddleLink"/>
