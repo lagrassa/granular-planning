@@ -91,8 +91,18 @@ class Simulator:
             euler = ut.euler_from_quat(orn)
             if (euler[0] or euler[1] or euler[2]):
                 ipdb.set_trace()
-            
+        if self.penetrating_objects_exist():
+            return True
+        return False 
         #p.changeConstraint(self.cid, robot_pos, quat, maxForce=100)
+    def penetrating_objects_exist(self):
+        for box_id in self.boxes:
+            contact_pts = p.getClosestPoints(self.robot, box_id, 0.5)
+            for contact_pt in contact_pts:
+                if contact_pt[8] < -0.005:
+                    return True
+                    import ipdb; ipdb.set_trace()
+        return False
     def close(self):
         p.disconnect()
     def set_robot_blk_states(self, rState, bStates):

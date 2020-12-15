@@ -14,7 +14,9 @@ def transition_model(state, robot_state, block_state, action, threshold=1e-3, si
         object states: Nx2 array of the (x,y) states of the objects
     """
     # set parent state
-    state.set_state(robot_state, block_state)
+    collision_detected = state.set_state(robot_state, block_state)
+    if collision_detected:
+        return False
     # check whether to use simulator for dynamics
     if not sim_flag:
         status = state.is_free_space_motion(threshold=threshold)
