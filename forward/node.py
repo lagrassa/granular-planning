@@ -20,7 +20,7 @@ class Node:
         self.envState = envState
         self.parentId = -1
         self.parentActionId = -1
-        self.weight = 100.0
+        self.weight = 1#100.0
 
     @property
     def f(self):
@@ -166,12 +166,15 @@ class Graph:
         for action_type in range(self.numActions):
             simAction = parseActionDTheta(action_type, self.stepXY, self.stepTheta)
             # apply action
-            simRobotState, simBlkStates = transition_model(simState,
+            result  = transition_model(simState,
                                                            parentRobotState,
                                                            parentBlockStates,
                                                            simAction,
                                                            threshold=self.collisionThresh,
-                                                           sim_flag=False)
+                                                           sim_flag=True)
+            if not result:
+                continue
+            simRobotState, simBlkStates = result 
             # convert back to graph state format
             graphRobotState, graphBlkStates = self.simStateToGraphState(simRobotState, simBlkStates)
             successors.append(self.addVertex(graphRobotState, graphBlkStates))

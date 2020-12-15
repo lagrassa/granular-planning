@@ -146,10 +146,11 @@ class State:
         """
         # set simulator transition model state
         state = np.concatenate((robot_state, obj_states.flat))
-        self.sim.set_state(state)
+        collision_detected  = self.sim.set_state(state)
         # set free space motion transition model state
         self._robot_state = robot_state.copy()
         self._obj_states = obj_states.copy()
+        return collision_detected
 
     def get_robot_bbox(self, thresh=1e-3):
         """

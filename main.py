@@ -9,6 +9,7 @@ from forward.state import State
 from forward.transition_models import *
 
 start = time.time()
+REPLAN = False
 
 def quantRobotState(robotState, xyStep, thetaStep):
     """Robot from continous simulator state to discrete graph state"""
@@ -57,8 +58,8 @@ workspace_size = 5
 goal_size = 0.5
 
 plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
-robot_state = [0, 0.6, 0.0]
-box_states = [0.4, 0, 0, 0.4]
+robot_state = [0, 0.5, 0.0]
+box_states = [0.6, 0, 0, 0.6]
 state = np.hstack([robot_state, box_states])
 init_state = state.copy()
 plan_world.set_state(state)
@@ -106,6 +107,7 @@ while True:
         # ipdb.set_trace()
         for a, state in zip(plan_actions, plan_states):
             #world.set_state(curr_state)
+            import ipdb; ipdb.set_trace()
             world.apply_action(a)
             print("Robot error:{}".format(np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3]))))
             print("Block error:{}".format(np.linalg.norm(world.get_state()[3:]-state[3:])))
@@ -121,10 +123,10 @@ while True:
             #         quantRobotPlan
             #         ))
 
-            if np.linalg.norm(quantRobotSim - quantRobotPlan) > 1e-6:
+            if REPLAN and np.linalg.norm(quantRobotSim - quantRobotPlan) > 1e-6:
                 break
 
-            if np.linalg.norm(quantBlkSim - quantBlkPlan) > 1e-6:
+            if REPLAN and np.linalg.norm(quantBlkSim - quantBlkPlan) > 1e-6:
                 # ipdb.set_trace()
                 break
 
@@ -148,8 +150,11 @@ while True:
             init_state = np.copy(world.get_state())
             init_state[2] %= np.pi
             world.close()
-            plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
-            plan_world.set_state(init_state)
+            if REPLAN:
+                plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
+                plan_world.set_state(init_state)
+            else:
+                break
             
 
 print(f"Total time taken: {time.time() - start:.5f}s")
