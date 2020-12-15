@@ -109,7 +109,7 @@ while True:
         # ipdb.set_trace()
         for a, state in zip(plan_actions, plan_states):
             #world.set_state(curr_state)
-            import ipdb; ipdb.set_trace()
+            # ipdb.set_trace()
             world.apply_action(a)
             print("Robot error:{}".format(np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3]))))
             print("Block error:{}".format(np.linalg.norm(world.get_state()[3:]-state[3:])))
@@ -135,7 +135,7 @@ while True:
                     quantBlockStates(state[3:], step_xy)
                     ))
 
-            if np.linalg.norm(quantBlkSim - quantBlkPlan) > 1e-6:
+            if REPLAN and np.linalg.norm(quantBlkSim - quantBlkPlan) > 1e-6:
                 print("Observe large block pose error")
                 break
 
