@@ -107,10 +107,14 @@ while True:
         for a, state in zip(plan_actions, plan_states):
             #world.set_state(curr_state)
             world.apply_action(a)
-            # print("Robot error:{}".format(np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3]))))
-            # print("Block error:{}".format(np.linalg.norm(world.get_state()[3:]-state[3:])))
+            print("Robot error:{}".format(np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3]))))
+            print("Block error:{}".format(np.linalg.norm(world.get_state()[3:]-state[3:])))
             quantRobotSim = quantRobotState(world.get_state()[:3], step_xy, step_theta)
             quantRobotPlan = quantRobotState(state[:3], step_xy, step_theta)
+
+            quantBlkSim = quantBlockStates(world.get_state()[3:], step_xy)
+            quantBlkPlan = quantBlockStates(state[3:], step_xy)
+
             # print("Robot state:{},{}vs{}".format(
             #         world.get_state()[:3], 
             #         quantRobotSim, 
@@ -119,6 +123,11 @@ while True:
 
             if np.linalg.norm(quantRobotSim - quantRobotPlan) > 1e-6:
                 break
+
+            if np.linalg.norm(quantBlkSim - quantBlkPlan) > 1e-6:
+                # ipdb.set_trace()
+                break
+
             print("Block state:{},{}vs{}".format(
                     world.get_state()[3:], 
                     quantBlockStates(world.get_state()[3:], step_xy),
@@ -128,10 +137,11 @@ while True:
             time.sleep(0.2)
         for i in range(4):
             world.apply_action([0, 0]) #see if it falls
-        # ipdb.set_trace()
+
         if isGoalSim(world.get_state()[3:].reshape((-1, 2)), 
             [-goal_size/2, +goal_size/2, -goal_size/2, +goal_size/2]):
             print("Goal reached...")
+            # ipdb.set_trace()
             break
         else:
             print("Re-planning...{}".format(world.get_state()[:3]))
