@@ -79,7 +79,7 @@ while True:
         world.apply_action([0, 0])
         curr_state = init_state
         for a, state in zip(plan_actions, plan_states):
-            world.set_state(curr_state)
+            #world.set_state(curr_state)
             world.apply_action(a)
             print("Robot error", np.linalg.norm(world.get_state()[:3]-curr_state[:3]))
             print("Block error", np.linalg.norm(world.get_state()[3:]-curr_state[3:]))
