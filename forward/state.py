@@ -1,4 +1,7 @@
 import numpy as np
+from shapely.geometry import Point, box, Polygon
+from shapely.affinity import rotate
+import matplotlib.pyplot as plt
 
 class State:
     def __init__(self, simulator, robot_dims=None, obj_dims=None):
@@ -11,6 +14,8 @@ class State:
         self.use_simulator = False
 
         self._robot_state, self._obj_states = self.sim.get_robot_blk_states()
+
+        self._ref_rot = np.pi/2 # phase shift so robot moves along it's local y instead of x
 
         if robot_dims is not None:
             self._robot_dims = robot_dims
@@ -26,7 +31,7 @@ class State:
         # assert self._obj_states.shape[0] == self._obj_dims.shape[0]
         
         # TODO need to update this everytime you add an object, assuming state is defined at obj/robot center
-        self.check_distance = np.max(self._robot_dims) / 2 + np.max(self._obj_dims) / 2
+        self.check_distance = np.max(self._robot_dims) / 2 + np.max(self._obj_dims)
 
     def get_obj_state(self, obj_id):
         """
@@ -86,13 +91,11 @@ class State:
         if self.use_simulator:
             self.sim.apply_action(action)
         else:
-            translation = action[0]
-            delta_theta = action[1]
             rob_state = self.get_robot_state()
-            theta = rob_state[-1]
-            delta_x = translation * np.cos(theta)
-            delta_y = translation * np.sin(theta)
-            self._robot_state += np.array([delta_x, delta_y, delta_theta]).reshape(3)
+            theta = rob_state[2]
+            delta_x = action[0] * np.cos(self._ref_rot + theta)
+            delta_y = action[0] * np.sin(self._ref_rot + theta)
+            self._robot_state += np.array([delta_x, delta_y, action[1]]).reshape(3)
 
     def set_obj_state(self, obj_id, x, y):
         """
@@ -118,7 +121,7 @@ class State:
             obj_states = poses
             self.sim.set_robot_blk_states(robot_state, obj_states)
         else:
-            self._obj_states = poses
+            self._obj_states = poses.copy()
 
     def set_robot_state(self, x, y, theta):
         """
@@ -140,12 +143,12 @@ class State:
         :param robot_state: np.array of the (x,y,theta) state of the robot
         :param poses: (Nx2) np.array of the [(x, y)] poses of the objects
         """
-        if self.use_simulator:
-            state = np.concatenate((robot_state, obj_states.flat))
-            self.sim.set_state(state)
-        else:
-            self._robot_state = robot_state
-            self._obj_states = obj_states
+        # if self.use_simulator:
+        state = np.concatenate((robot_state, obj_states.flat))
+        self.sim.set_state(state)
+        # else:
+        self._robot_state = robot_state.copy()
+        self._obj_states = obj_states.copy()
 
     def get_robot_bbox(self):
         """
@@ -154,70 +157,104 @@ class State:
         """
         x, y, theta = self.get_robot_state()
         center = np.array([x,y])
-        w, h = self._robot_dims
+        w = self._robot_dims[0]
+        h = self._robot_dims[1]
+        # import ipdb; ipdb.set_trace()
 
         v1 = np.array([np.cos(theta), np.sin(theta)])
         v2 = np.array([-v1[1], v1[0]]) # rotate by 90 degrees
 
         v1 *= w / 2
         v2 *= h / 2
+        return Polygon([tuple(center + v1 + v2),
+                         tuple(center - v1 + v2),
+                         tuple(center - v1 - v2),
+                         tuple(center + v1 - v2)])
+        # return bbox
 
-        return np.array([center + v1 + v2,
-                         center - v1 + v2,
-                         center - v1 - v2,
-                         center + v1 - v2])
+        # return np.array([center + v1 + v2,
+        #                  center - v1 + v2,
+        #                  center - v1 - v2,
+        #                  center + v1 - v2])
+
+        # robot = box(x-w/2, y-h/2, x+w/2, y-h/2)
+        # return rotate(robot, theta*180/np.pi, 'center')
 
     def is_free_space_motion(self, threshold=1e-2):
         """
         Return True if the robot is close to being in collision with an object.
         Ref: https://hackmd.io/@US4ofdv7Sq2GRdxti381_A/ryFmIZrsl?type=view 
         """
-        # Get all the objects that could possibly be in collision with robot
-        nearest_objs, nearest_dist = self.get_nearest_blocks(threshold=threshold)
+        # # Get all the objects that could possibly be in collision with robot
+        # nearest_objs, nearest_dist = self.get_nearest_blocks(threshold=threshold)
         
-        if nearest_objs.shape[0] == 0:
-            # return False if no objects are close to robot
-            return False
-        # elif nearest_dist[0] <= np.min(self._robot_dims):
+        # if nearest_objs.shape[0] == 0:
+        #     # return False if no objects are close to robot
+        #     self.use_simulator = False
         #     return True
-        else:
-            # check if any of the objects near robot are in collision
-            in_collision = True # Assuming robot is in collision unless proven that it is not
-            for i in range(nearest_objs.shape[0]):
-                obj_id = nearest_objs[i]
+        # # elif nearest_dist[0] <= np.min(self._robot_dims):
+        # #     return True
+        # else:
+        
+        robot_bbox = self.get_robot_bbox()
+        for i in range(self._obj_states.shape[0]):
+            temp_state = self._obj_states[i]
+            temp_point = Point(temp_state[0],temp_state[1])
+            temp_circle = temp_point.buffer(self._obj_dims)
 
-                # TODO change the way to get vertices below when shapes aren't circles
-                # TODO can get bbox around circle that is aligned with robot if this is too slow
-                obj_vertices = get_circle_bbox(self._obj_states[obj_id], self._obj_dims)
-                edges = get_edges(obj_vertices)
+
+            # fig, ax = plt.subplots()
+            # plt.plot(*robot_bbox.exterior.xy)
+            # plt.plot(*temp_circle.exterior.xy)
+            # ax.set_ylim(-1,1)
+            # ax.set_xlim(-1,1)
+            # plt.show()
+            if robot_bbox.intersects(temp_circle):
+                self.use_simulator = True
+                return False
+
+        self.use_simulator = False
+        return True
+
+            # # check if any of the objects near robot are in collision
+            # in_collision = True # Assuming robot is in collision unless proven that it is not
+            # # d
+            # for i in range(nearest_objs.shape[0]):
+            #     obj_id = nearest_objs[i]
+
+            #     # TODO change the way to get vertices below when shapes aren't circles
+            #     # TODO can get bbox around circle that is aligned with robot if this is too slow
+            #     obj_vertices = get_circle_bbox(self._obj_states[obj_id], self._obj_dims)
+            #     edges = get_edges(obj_vertices)
                 
-                robot_vertices = self.get_robot_bbox()
-                edges += get_edges(robot_vertices)
+            #     robot_vertices = self.get_robot_bbox()
+            #     edges += get_edges(robot_vertices)
 
-                normals = [orthog_vec(edge) for edge in edges]
+            #     normals = [orthog_vec(edge) for edge in edges]
 
-                for normal in normals:
-                    if(is_seperated(normal, robot_vertices, obj_vertices, threshold=threshold)):
-                        in_collision = False
-                        break
+            #     for normal in normals:
+            #         if(is_seperated(normal, robot_vertices, obj_vertices, threshold=threshold)):
+            #             in_collision = False
+            #             break
                 
-                if in_collision:
-                    self.use_simulator = True
-                    return True
-                else:
-                    in_collision = True
+            #     if in_collision:
+            #         self.use_simulator = True
+            #         return False
+            #     else:
+            #         in_collision = True
 
-            self.use_simulator = False
-            return False
+            # self.use_simulator = False
+            # return True
 
 
     def get_nearest_blocks(self, threshold=1e-2):
         """
         Return the object ID's of the objects within possible collision distance to the robot.
         """
+        # import ipdb; ipdb.set_trace()
         dist = np.linalg.norm(self._robot_state[:-1].reshape(1,2) - self._obj_states, axis=0)
         sorted_obj_ids = np.argsort(dist)
-        idx = np.argmax(dist[sorted_obj_ids] >= (self.check_distance-threshold))
+        idx = np.argmax(dist[sorted_obj_ids] >= (self.check_distance+threshold))
         obj_ids = sorted_obj_ids[:idx]
         return obj_ids, dist[obj_ids]
 

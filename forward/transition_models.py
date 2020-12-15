@@ -1,15 +1,5 @@
 import numpy as np
 
-# def is_free_space_motion(state, action):
-#     """
-
-#     :param state:  beginning state
-#     :param action: action
-#     :return: whether the action occurs in free space. Mostly just uses collision_fn from state
-#     """
-#     d
-#     pass
-
 def transition_model(state, robot_state, block_state, action, simulator, threshold):
     """
     Given current state and action return next state
@@ -20,12 +10,35 @@ def transition_model(state, robot_state, block_state, action, simulator, thresho
     :param simulator instance
     :return:
     """
+    # import ipdb; ipdb.set_trace()
+    print(state.get_state())
     # set parent state
     state.set_state(robot_state, block_state)
     # check whether to use simulator for dynamics
-    state.is_free_space_motion(threshold=threshold)
+    status = state.is_free_space_motion(threshold=threshold)
+    # print(status)
+    # state.use_simulator = True
     # apply action
     state.apply_action(action)
+    # print(state.get_state())
+
+    # state.set_state(robot_state, block_state)
+    # # check whether to use simulator for dynamics
+    # # state.is_free_space_motion(threshold=threshold)
+    # state.use_simulator = False
+    # # apply action
+    # state.apply_action(action)
+    # print(state.get_state())
+    # import ipdb; ipdb.set_trace()
+
+    # state.set_state(robot_state, block_state)
+    # # check whether to use simulator for dynamics
+    # print(state.is_free_space_motion(threshold=threshold))
+    # # state.use_simulator = False
+    # # # apply action
+    # # state.apply_action(action)
+    # # print(state.get_state())
+
     # return successor
     return state.get_state()
 

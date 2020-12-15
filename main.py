@@ -1,5 +1,6 @@
 import ipdb
 import numpy as np
+import time
 import planning.astar as astar
 
 from envs.block_env import Simulator
@@ -7,6 +8,7 @@ from forward.node import Node, Graph
 from forward.state import State
 from forward.transition_models import *
 
+start = time.time()
 
 def quantRobotState(robotState, xyStep, thetaStep):
     """Robot from continous simulator state to discrete graph state"""
@@ -73,10 +75,12 @@ while True:
         world.set_state(simState)
         world.apply_action([0, 0, 0])
         for a in plan:
-            ipdb.set_trace()
+            # ipdb.set_trace()
             world.apply_action(a)
             world.set_state(world.get_state())
         world.apply_action([0, 0, 0])
         world.set_state(world.get_state())
-        ipdb.set_trace()
+        # ipdb.set_trace()
         break
+
+print(f"Total time taken: {time.time() - start:.5f}s")

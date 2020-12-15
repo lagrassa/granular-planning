@@ -133,7 +133,7 @@ class Graph:
                                                            parentBlockStates,
                                                            simAction,
                                                            self.world,
-                                                           threshold=self.stepXY*1.5)
+                                                           threshold=self.stepXY*10)
             # graph and sim have different representation for action
             # print("simRobotState=", simState[:3], simRobotState, action)
             # ipdb.set_trace()
