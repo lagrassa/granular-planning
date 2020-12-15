@@ -10,6 +10,7 @@ class Simulator:
     def __init__(self, workspace_size, goal_hole_width, gui=False, num_boxes = 2):
         if gui:
             self.physicsClient = p.connect(p.GUI)
+            ut.set_camera(90, -80, 1.95, target_position=np.zeros(3))
         else:
             self.physicsClient = p.connect(p.DIRECT)
 
