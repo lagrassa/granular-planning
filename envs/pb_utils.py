@@ -439,7 +439,6 @@ def simulate_for_duration(duration):
     dt = get_time_step()
     for i in range(int(duration / dt)):
         step_simulation()
-        time.sleep(0.001)
 
 def get_time_step():
     # {'gravityAccelerationX', 'useRealTimeSimulation', 'gravityAccelerationZ', 'numSolverIterations',
