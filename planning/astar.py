@@ -29,7 +29,8 @@ def ComputePath(OPEN, graph):
                 #simAction = parseAction(S.parentActionId, Sparent.robotState[-1], graph.stepXY, graph.stepTheta)
                 simAction = parseActionDTheta(S.parentActionId, graph.stepXY, graph.stepTheta)
                 plan_actions.append(simAction)
-                plan.append(graph.graphStateToSimState(S))
+                robot_state, block_states = graph.graphStateToSimState(S)
+                plan.append(np.hstack([robot_state, block_states.flatten()]))
                 S = Sparent
             plan_actions.reverse()
             plan.reverse()

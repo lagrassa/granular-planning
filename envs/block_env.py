@@ -18,8 +18,6 @@ class Simulator:
         p.setTimeStep(1/100.)
         scaling = 10
         self.num_uses = 0
-        self.pusher_length = 0.1*scaling
-        self.pusher_width = 0.01*scaling
         self.box_width = 0.01*scaling
         self.height = 0.01*scaling
         #self.robot  = ut.create_box(self.pusher_length, self.pusher_width, self.height, color = (0,1,0,1), mass=0.1)
@@ -104,6 +102,7 @@ class Simulator:
         state = np.concat((rState, bStates.flat))
         return self.set_state(state)
 
+
     def apply_action(self, action, show_error=False):
         """
         Applies action to environment and then simulates it
@@ -131,7 +130,6 @@ class Simulator:
             cur_q = ut.get_joint_positions(self.robot, (0,1,2))
             print("pos error:", np.linalg.norm(np.array(cur_q[:2])-np.array(des_pos)))
             print("angle error:", np.linalg.norm(cur_q[2]-des_theta))
-
 
     def get_state(self):
         """
