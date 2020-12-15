@@ -27,8 +27,8 @@ class Simulator:
         self.robot = p.loadURDF(os.path.join(urdf_folder, "paddle.urdf"))
         #self.boxes  = [ut.create_box(self.box_width, self.box_width, self.height, color = (1,0,0,1), mass = 5) for _ in range(num_boxes)]
         self.boxes  = [p.loadURDF(os.path.join(urdf_folder, "cyl.urdf")) for _ in range(num_boxes)]
-        p.changeDynamics(self.robot, -1, restitution=0.002,linearDamping=1, lateralFriction=0.99, jointDamping =0.01)
-        [p.changeDynamics(box, -1, restitution=0.002, linearDamping = 0.99, angularDamping =0.99, lateralFriction=0.99, jointDamping=0.01) for box in self.boxes]
+        p.changeDynamics(self.robot, -1, restitution=0.002,linearDamping=1, lateralFriction=0.2, jointDamping =0.01)
+        [p.changeDynamics(box, -1, restitution=0.002, linearDamping = 0.99, angularDamping =0.99, lateralFriction=0.2, jointDamping=0.01) for box in self.boxes]
         self.goal_hole_width=goal_hole_width
         ut.enable_gravity()
         self.plane_height = 0.5
@@ -61,7 +61,7 @@ class Simulator:
         ut.set_point(bottom_box, (-center_distance_sides,0, -plane_height/2))
  
         blocks = [left_box, right_box, top_box, bottom_box]
-        [p.changeDynamics(block, -1, restitution=0.98, lateralFriction=0.99) for block in blocks]
+        [p.changeDynamics(block, -1, restitution=0.98, lateralFriction=0.3) for block in blocks]
 
     def set_state(self, state, debug=True):
         """
