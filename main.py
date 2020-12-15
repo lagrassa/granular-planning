@@ -16,7 +16,7 @@ def quantRobotState(robotState, xyStep, thetaStep):
     qs[:2] = np.round(robotState[:2] / xyStep)
     qs[2] = np.round(robotState[2] / thetaStep)
     # avoid negative heading index
-    qs[2] = qs[2] % ((2 * np.pi + 1e-6) // thetaStep)
+    qs[2] = qs[2] % ((np.pi + 1e-6) // thetaStep)
     return qs.astype(np.int)
 
 
