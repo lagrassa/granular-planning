@@ -57,8 +57,8 @@ workspace_size = 5
 goal_size = 0.5
 
 plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
-robot_state = [0, 0.5, 0.0]
-box_states = [0.3, 0, 0, 0.3]
+robot_state = [0, 0.6, 0.0]
+box_states = [0.4, 0, 0, 0.4]
 state = np.hstack([robot_state, box_states])
 init_state = state.copy()
 plan_world.set_state(state)
@@ -79,6 +79,7 @@ goal_discrete = np.stack([goalX.flat, goalY.flat], axis=1).astype(np.int)
 goal = [0,0,goal_size, goal_size]
 g = Graph(goal_discrete, plan_world, step_xy, step_theta,goal, cyl_radius=0.05, numActions=4, heuristicAlg='sum', collisionThresh=1e-3)
 
+numPlans = 0
 while True:
     # Not sure whether we could reuse the graph
     g.reset()
@@ -97,26 +98,46 @@ while True:
     world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
     
     if len(plan_actions) > 0:
-        print("Plan created: {}".format(plan_actions))
+        numPlans += 1
+        print("Plan {} created: {}".format(numPlans, plan_actions))
         world.set_state(init_state)
         world.apply_action([0, 0])
         curr_state = init_state
-        ipdb.set_trace()
+        # ipdb.set_trace()
         for a, state in zip(plan_actions, plan_states):
             #world.set_state(curr_state)
             world.apply_action(a)
-            print("Robot error", np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3])))
-            print("Block error", np.linalg.norm(world.get_state()[3:]-state[3:]))
+            # print("Robot error:{}".format(np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3]))))
+            # print("Block error:{}".format(np.linalg.norm(world.get_state()[3:]-state[3:])))
+            quantRobotSim = quantRobotState(world.get_state()[:3], step_xy, step_theta)
+            quantRobotPlan = quantRobotState(state[:3], step_xy, step_theta)
+            # print("Robot state:{},{}vs{}".format(
+            #         world.get_state()[:3], 
+            #         quantRobotSim, 
+            #         quantRobotPlan
+            #         ))
+
+            if np.linalg.norm(quantRobotSim - quantRobotPlan) > 1e-6:
+                break
+            print("Block state:{},{}vs{}".format(
+                    world.get_state()[3:], 
+                    quantBlockStates(world.get_state()[3:], step_xy),
+                    quantBlockStates(state[3:], step_xy)
+                    ))
             curr_state = state
             time.sleep(0.2)
         for i in range(4):
             world.apply_action([0, 0]) #see if it falls
-        ipdb.set_trace()
+        # ipdb.set_trace()
         if isGoalSim(world.get_state()[3:].reshape((-1, 2)), 
             [-goal_size/2, +goal_size/2, -goal_size/2, +goal_size/2]):
             print("Goal reached...")
             break
         else:
-            print("Re-planning...")
+            print("Re-planning...{}".format(world.get_state()[:3]))
+            init_state = np.copy(world.get_state())
+            init_state[2] %= np.pi
+            plan_world.set_state(init_state)
+            
 
 print(f"Total time taken: {time.time() - start:.5f}s")

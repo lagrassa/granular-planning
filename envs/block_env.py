@@ -77,7 +77,7 @@ class Simulator:
         for i, box in enumerate(self.boxes):
             box_pose = state[self.box_pose_idx + 2*i:self.box_pose_idx+2*i+2]
             # TODO: update this condition with a more accurate one
-            if np.max(np.abs(box_pose)) < self.goal_hole_width / 2 + 0.05:
+            if np.max(np.abs(box_pose)) < self.goal_hole_width / 2:
                 new_h = self.height*0.5 - self.plane_height * (i + 1)
             else:
                 new_h = self.height*0.5
@@ -89,7 +89,7 @@ class Simulator:
             orn = ut.get_pose(self.robot)[1]
             euler = ut.euler_from_quat(orn)
             if (euler[0] or euler[1] or euler[2]):
-                import ipdb; ipdb.set_trace()
+                ipdb.set_trace()
             
         #p.changeConstraint(self.cid, robot_pos, quat, maxForce=100)
     def close(self):

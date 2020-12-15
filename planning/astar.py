@@ -25,8 +25,8 @@ def ComputePath(OPEN, graph):
             found_goal = True
             while S.parentId!= -1:
                 Sparent = graph.getNode(S.parentId)
-                print("Action:", S.parentActionId, S.robotState)
-                #simAction = parseAction(S.parentActionId, Sparent.robotState[-1], graph.stepXY, graph.stepTheta)
+                print("Robot(t-1)==Action==>Robot(t): {}==({})==>{}".format(Sparent.robotState, S.parentActionId, S.robotState))
+                print("blkState(t):", S.envState.flatten())
                 simAction = parseActionDTheta(S.parentActionId, graph.stepXY, graph.stepTheta)
                 plan_actions.append(simAction)
                 robot_state, block_states = graph.graphStateToSimState(S)
