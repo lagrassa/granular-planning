@@ -27,15 +27,17 @@ class Simulator:
         self.robot = p.loadURDF(os.path.join(urdf_folder, "paddle.urdf"))
         #self.boxes  = [ut.create_box(self.box_width, self.box_width, self.height, color = (1,0,0,1), mass = 5) for _ in range(num_boxes)]
         self.boxes  = [p.loadURDF(os.path.join(urdf_folder, "cyl.urdf")) for _ in range(num_boxes)]
-        p.changeDynamics(self.robot, -1, restitution=0.002,linearDamping=1, lateralFriction=0.2, jointDamping =0.01)
-        [p.changeDynamics(box, -1, restitution=0.002, linearDamping = 0.99, angularDamping =0.99, lateralFriction=0.2, jointDamping=0.01) for box in self.boxes]
+        self.mu = 0.1
+        self.restitution = 0.1
+        p.changeDynamics(self.robot, -1, restitution=self.restitution,linearDamping=1, lateralFriction=self.mu, jointDamping =0.01)
+        [p.changeDynamics(box, -1, restitution=self.restitution, linearDamping = 0.99, angularDamping =0.99, lateralFriction=self.mu, jointDamping=0.01) for box in self.boxes]
         self.goal_hole_width=goal_hole_width
         ut.enable_gravity()
         self.plane_height = 0.5
         self.setup_hole()
         self.box_pose_idx = 3
         #self.cid = p.createConstraint(self.robot, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
-        self.force = 20.0#0.2
+        self.force = 5.0#0.2
 
     def set_motors(self, robot_pos, theta):
         maxVel = 1
@@ -61,7 +63,7 @@ class Simulator:
         ut.set_point(bottom_box, (-center_distance_sides,0, -plane_height/2))
  
         blocks = [left_box, right_box, top_box, bottom_box]
-        [p.changeDynamics(block, -1, restitution=0.98, lateralFriction=0.3) for block in blocks]
+        [p.changeDynamics(block, -1, restitution=self.restitution, lateralFriction=self.mu) for block in blocks]
 
     def set_state(self, state, debug=True):
         """
@@ -92,7 +94,8 @@ class Simulator:
                 import ipdb; ipdb.set_trace()
             
         #p.changeConstraint(self.cid, robot_pos, quat, maxForce=100)
-
+    def close(self):
+        p.disconnect()
     def set_robot_blk_states(self, rState, bStates):
         """Set simulator internal states
         :param rState: 1D np array (x, y, theta)
@@ -158,7 +161,10 @@ if __name__ == "__main__":
     robot_state  = [0.0,-0.37,0.05]
     box_states  = [0.2,0.2,0,0.3]
     state = np.hstack([robot_state,box_states])
-    world.set_state(state)
+    test_state = [ 0.        ,  0.3       ,  2.35619449,  0.2       , -0.1       ,
+        0.        ,  0.        ]
+    world.set_state(test_state)
+    import ipdb; ipdb.set_trace()
     obs = world.get_state()
     assert(np.allclose(state, obs))
     world.apply_action([0,0.1])

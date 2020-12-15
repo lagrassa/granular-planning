@@ -42,9 +42,10 @@ class Node:
 class Graph:
     """ Assume self.vertices[0] is start state
     """
-    def __init__(self, holePos, world, stepXY, stepTheta, numActions=4, heuristicAlg='8n'):
+    def __init__(self, holePos, world, stepXY, stepTheta, goal, cyl_radius = 0.05, numActions=4, heuristicAlg='8n'):
         """
-        :param holePos: 2D Nx2 numpy array of [(x, y)], np.int
+        :param DEPRECATED for all but heuristics: holePos: 2D Nx2 numpy array of [(x, y)], np.int
+        :param holePos: array: [x,y,w,h] (x,y) pos and (w, h)
         :param world: simulator
         :param numActions: 0 forward, 1 backward, 2 rotate 45 degree clockwise, 
                             3 rotate 45 degree counter clockwise
@@ -54,6 +55,12 @@ class Graph:
         self.verticesLUT = {}
         # Hole positions, used to calculate heuristics 
         self.holes = holePos
+        self.cyl_radius = cyl_radius
+
+        self.hole_center = goal[0:2]
+        self.w  = goal[2]
+        self.h = goal[3]
+        assert (self.w == self.h) #square goal atm
         self.world = world
 
         self.stepXY = stepXY
@@ -66,9 +73,29 @@ class Graph:
         self.vertices = []
         self.verticesLUT = {}
 
+    def viz_node(self, node):
+        old_state = self.world.get_state()
+        simState = self.graphStateToSimState(node)
+        self.world.set_state(simState)
+        input("Visualize world, OK?")
+
     def isGoal(self, node):
         """Reach the goal when all blocks are in the holes"""
-        return self.diagDistance(node, self.holes)[1] == 0
+        simState = self.graphStateToSimState(node)
+        coords = simState[3:].reshape(-1,2)
+        is_goal_result = True
+        for dim, goal_dim in zip([0,1], [self.w, self.h]):
+            if np.any((self.hole_center[dim]-goal_dim/2)>coords[:,dim]+self.cyl_radius):
+                is_goal_result = False
+            if np.any((self.hole_center[dim]+goal_dim/2)<coords[:,dim]-self.cyl_radius):
+                is_goal_result = False
+
+
+        old_is_goal_result =  self.diagDistance(node, self.holes)[1] == 0
+        if (old_is_goal_result != is_goal_result):
+            print("Different results between old and new result")
+            import ipdb; ipdb.set_trace()
+        return is_goal_result
 
     def addVertex(self, robotState, envState):
         """ Maintains both vertices list and verticesLUT
