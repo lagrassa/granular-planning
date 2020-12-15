@@ -43,7 +43,7 @@ def robotPosDiff(pos1, pos2):
     diff[2] = pos1[2] % (2 * np.pi) - pos2[2] % (2 * np.pi)
     if diff[2] >= np.pi:
         diff[2] -= 2 * np.pi
-    if diff[2] <= np.pi:
+    if diff[2] <= -np.pi:
         diff[2] += 2 * np.pi
     return diff
 
@@ -124,10 +124,7 @@ while True:
             #         ))
 
             if np.linalg.norm(quantRobotSim - quantRobotPlan) > 1e-6:
-                break
-
-            if np.linalg.norm(quantBlkSim - quantBlkPlan) > 1e-6:
-                # ipdb.set_trace()
+                print("Observe large robot pose error")
                 break
 
             print("Block state:{},{}vs{}".format(
@@ -135,6 +132,11 @@ while True:
                     quantBlockStates(world.get_state()[3:], step_xy),
                     quantBlockStates(state[3:], step_xy)
                     ))
+
+            if np.linalg.norm(quantBlkSim - quantBlkPlan) > 1e-6:
+                print("Observe large block pose error")
+                break
+
             curr_state = state
             time.sleep(0.2)
         for i in range(4):
