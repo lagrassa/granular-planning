@@ -25,6 +25,20 @@ def quantBlockStates(blockStates, step):
     return np.round(blockStates / step).astype(np.int)
 
 
+def isGoalSim(blockStates, goalRect):
+    """
+    :param blockStates: np.array, shape is [num_blocks, 2]
+    :param goalRect: (xmin, xmax, ymin, ymax) in float, the goal area
+    """
+    isGoal = True
+    for bs in blockStates:
+        if not(goalRect[0] <= bs[0] <= goalRect[1] and 
+                goalRect[2] <= bs[1] <= goalRect[3]):
+            isGoal = False
+            break
+    return isGoal
+
+
 # Set up the simulator
 # workspace top left =      [-workspace_size/2, +workspace_size/2]
 #           bottom right =  [+workspace_size/2, -workspace_size/2]
@@ -87,9 +101,14 @@ while True:
             print("Robot error", np.linalg.norm(world.get_state()[:3]-curr_state[:3]))
             print("Block error", np.linalg.norm(world.get_state()[3:]-curr_state[3:]))
             curr_state = state
+            time.sleep(0.2)
         for i in range(4):
             world.apply_action([0, 0]) #see if it falls
         ipdb.set_trace()
-        break
+        if isGoalSim(world.get_state()[3:].reshape((-1, 2)), 
+            [-goal_size/2, +goal_size/2, -goal_size/2, +goal_size/2]):
+            break
+        else:
+            print("Re-planning...")
 
 print(f"Total time taken: {time.time() - start:.5f}s")
