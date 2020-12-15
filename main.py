@@ -1,5 +1,6 @@
 import ipdb
 import numpy as np
+import time
 import planning.astar as astar
 
 from envs.block_env import Simulator
@@ -7,6 +8,7 @@ from forward.node import Node, Graph
 from forward.state import State
 from forward.transition_models import *
 
+start = time.time()
 
 def quantRobotState(robotState, xyStep, thetaStep):
     """Robot from continous simulator state to discrete graph state"""
@@ -54,7 +56,7 @@ goalCellOffset = numGoalCells // 2
 goalX, goalY = np.meshgrid(np.arange(numGoalCells) - goalCellOffset, np.arange(numGoalCells) - goalCellOffset)
 goal_discrete = np.stack([goalX.flat, goalY.flat], axis=1).astype(np.int)
 goal = [0,0,goal_size, goal_size]
-g = Graph(goal_discrete, plan_world, step_xy, step_theta,goal, cyl_radius=0.05, numActions=4, heuristicAlg='sum')
+g = Graph(goal_discrete, plan_world, step_xy, step_theta,goal, cyl_radius=0.05, numActions=4, heuristicAlg='sum', collisionThresh=1e-3)
 
 while True:
     # Not sure whether we could reuse the graph
@@ -78,8 +80,9 @@ while True:
         world.set_state(init_state)
         world.apply_action([0, 0])
         curr_state = init_state
+        import ipdb; ipdb.set_trace()
         for a, state in zip(plan_actions, plan_states):
-            world.set_state(curr_state)
+            #world.set_state(curr_state)
             world.apply_action(a)
             print("Robot error", np.linalg.norm(world.get_state()[:3]-curr_state[:3]))
             print("Block error", np.linalg.norm(world.get_state()[3:]-curr_state[3:]))
@@ -88,3 +91,5 @@ while True:
             world.apply_action([0, 0]) #see if it falls
         ipdb.set_trace()
         break
+
+print(f"Total time taken: {time.time() - start:.5f}s")
