@@ -137,6 +137,8 @@ while True:
             print("Re-planning...{}".format(world.get_state()[:3]))
             init_state = np.copy(world.get_state())
             init_state[2] %= np.pi
+            world.close()
+            plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
             plan_world.set_state(init_state)
             
 
