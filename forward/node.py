@@ -20,7 +20,7 @@ class Node:
         self.envState = envState
         self.parentId = -1
         self.parentActionId = -1
-        self.weight = 1#100.0
+        self.weight = 5#100.0
 
     @property
     def f(self):

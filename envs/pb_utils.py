@@ -435,10 +435,12 @@ def wait_for_duration(duration): #, dt=0):
     while elapsed_time(t0) <= duration:
         update_viewer()
 
-def simulate_for_duration(duration):
+def simulate_for_duration(duration, sleep_time=0):
     dt = get_time_step()
     for i in range(int(duration / dt)):
         step_simulation()
+        if sleep_time > 0:
+            time.sleep(sleep_time)
 
 def get_time_step():
     # {'gravityAccelerationX', 'useRealTimeSimulation', 'gravityAccelerationZ', 'numSolverIterations',

@@ -99,7 +99,7 @@ while True:
     plan_actions, plan_states = astar.A_star(g)
     plan_world.close()
     world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
-    
+    import ipdb; ipdb.set_trace() 
     if len(plan_actions) > 0:
         numPlans += 1
         print("Plan {} created: {}".format(numPlans, plan_actions))
