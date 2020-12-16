@@ -48,7 +48,6 @@ def robotPosDiff(pos1, pos2):
         diff[2] += 2 * np.pi
     return diff
 
-
 # Set up the simulator
 # workspace top left =      [-workspace_size/2, +workspace_size/2]
 #           bottom right =  [+workspace_size/2, -workspace_size/2]
@@ -59,9 +58,16 @@ def robotPosDiff(pos1, pos2):
 workspace_size = 5
 goal_size = 0.5
 
-plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
-robot_state = [0, 0.5, 0.0]
-box_states = [0.6, 0, 0, 0.6]
+plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 1)#2)
+#robot_state = [0, 1, 0.0]
+robot_state = [-1, 1, 0.0]
+#box_states = [0.3, 0, 0, 0.3]
+box_states = [-0.3, 0.3]
+#box_states = [0.3, 0]
+#box_states = [0.3, 0, -0.3, 0]
+#box_states = [0, -0.3, 0, 0.3]
+#box_states = [0.4, 0, 0, 0.4]
+#box_states = [0.6, 0, 0, 0.6]
 state = np.hstack([robot_state, box_states])
 init_state = state.copy()
 plan_world.set_state(state)
@@ -81,6 +87,7 @@ goalX, goalY = np.meshgrid(np.arange(numGoalCells) - goalCellOffset, np.arange(n
 goal_discrete = np.stack([goalX.flat, goalY.flat], axis=1).astype(np.int)
 goal = [0,0,goal_size, goal_size]
 g = Graph(goal_discrete, plan_world, step_xy, step_theta,goal, cyl_radius=0.05, numActions=4, heuristicAlg='sum', collisionThresh=1e-3)
+#g = Graph(goal_discrete, plan_world, step_xy, step_theta,goal, cyl_radius=0.05, numActions=4, heuristicAlg='8n', collisionThresh=1e-3)
 
 numPlans = 0
 free_motion_count = 0
@@ -96,14 +103,25 @@ while True:
     print("Robot:{}, blk:{}".format(rState, bStates))
     g.addVertex(rState, bStates)
     g.getNode(0).g = 0
+		
+    print()
+    print("------------------------------------------------------------------")
+    print()
 
     # A star
     plan_actions, plan_states, fm_count, tt = astar.A_star(g)
     free_motion_count += fm_count
     total_transitions += tt
+    
+    print()
+    print("------------------------------------------------------------------")
+    print()
+#    break;
+
+
     plan_world.close()
-    world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
-    # import ipdb; ipdb.set_trace() 
+    world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 1)#2)
+#    import ipdb; ipdb.set_trace()
     if len(plan_actions) > 0:
         numPlans += 1
         print("Plan {} created: {}".format(numPlans, plan_actions))
@@ -112,17 +130,16 @@ while True:
         curr_state = init_state
         # ipdb.set_trace()
         for a, state in zip(plan_actions, plan_states):
-            world.set_state(curr_state)
-            # ipdb.set_trace()
+#            time.sleep(1)
+            #world.set_state(curr_state)
             world.apply_action(a)
-            print("Robot error:{}".format(np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3]))))
-            print("Block error:{}".format(np.linalg.norm(world.get_state()[3:]-state[3:])))
+            # print("Robot error:{}".format(np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3]))))
+            # print("Block error:{}".format(np.linalg.norm(world.get_state()[3:]-state[3:])))
             quantRobotSim = quantRobotState(world.get_state()[:3], step_xy, step_theta)
             quantRobotPlan = quantRobotState(state[:3], step_xy, step_theta)
-
+            
             quantBlkSim = quantBlockStates(world.get_state()[3:], step_xy)
             quantBlkPlan = quantBlockStates(state[3:], step_xy)
-
             # print("Robot state:{},{}vs{}".format(
             #         world.get_state()[:3], 
             #         quantRobotSim, 
@@ -132,26 +149,23 @@ while True:
             if REPLAN and np.linalg.norm(quantRobotSim - quantRobotPlan) > 1e-6:
                 print("Observe large robot pose error")
                 break
-
             print("Block state:{},{}vs{}".format(
                     world.get_state()[3:], 
                     quantBlockStates(world.get_state()[3:], step_xy),
                     quantBlockStates(state[3:], step_xy)
                     ))
-
             if REPLAN and np.linalg.norm(quantBlkSim - quantBlkPlan) > 1e-6:
                 print("Observe large block pose error")
                 break
 
             curr_state = state
-            time.sleep(0.2)
+#            time.sleep(0.2)
         for i in range(4):
             world.apply_action([0, 0]) #see if it falls
-
+        # ipdb.set_trace()
         if isGoalSim(world.get_state()[3:].reshape((-1, 2)), 
             [-goal_size/2, +goal_size/2, -goal_size/2, +goal_size/2]):
             print("Goal reached...")
-            # ipdb.set_trace()
             break
         else:
             print("Re-planning...{}".format(world.get_state()[:3]))
@@ -168,6 +182,5 @@ while True:
                 plan_world.set_state(init_state)
             else:
                 break
-            
-print(f"Number of free space transitions: {free_motion_count} out of {total_transitions}")
+
 print(f"Total time taken: {time.time() - start:.5f}s")
