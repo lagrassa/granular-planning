@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import ipdb
 
 from .transition_models import parseAction, transition_model, parseActionDTheta
@@ -38,7 +39,24 @@ class Node:
             return self.envState[ch.vertices]
         except QhullError:
             return self.envState
-
+            
+    def node_info(self):	# For debugging
+        print("h:",self.h)
+        print("g:",self.g)
+        print("robotState:",self.robotState)
+        print("envState:",self.envState)
+        theta = math.atan2(self.envState[0][1], self.envState[0][0])*(180/math.pi)
+        if theta < 0:
+            theta += 360
+        pusher_theta = theta - 90
+        if pusher_theta < 0:
+            		pusher_theta += 360
+        print("Angle from origin to bead is",theta)
+        print("Ideal angle for the pusher is",pusher_theta)
+        idealx = self.envState[0][0] + 1*np.sign(self.envState[0][0])
+        idealy = self.envState[0][1] + 1*np.sign(self.envState[0][1])
+        print("idealx is ", idealx)
+        print("idealy is ", idealy)
 
 class Graph:
     """ Assume self.vertices[0] is start state
@@ -89,19 +107,17 @@ class Graph:
         simState = self.graphStateToSimState(node)
         coords = simState[1]
         is_goal_result = True
-        tol = -0.01
         for dim, goal_dim in zip([0,1], [self.w, self.h]):
-            if np.any((self.hole_center[dim]-goal_dim/2)>coords[:,dim]-(self.cyl_radius+tol)):
+            if np.any((self.hole_center[dim]-goal_dim/2)>coords[:,dim]+self.cyl_radius):
                 is_goal_result = False
-            if np.any((self.hole_center[dim]+goal_dim/2)<coords[:,dim]+(self.cyl_radius+tol)):
+            if np.any((self.hole_center[dim]+goal_dim/2)<coords[:,dim]-self.cyl_radius):
                 is_goal_result = False
 
 
         old_is_goal_result =  self.diagDistance(node, self.holes)[1] == 0
         if (old_is_goal_result != is_goal_result):
-            pass
-            #print("Different results between old and new result")
-            #import ipdb; ipdb.set_trace()
+            print("Different results between old and new result")
+            import ipdb; ipdb.set_trace()
         return is_goal_result
 
     def addVertex(self, robotState, envState):
@@ -155,7 +171,7 @@ class Graph:
         """
         return self.quantRobotState(rState), self.quantBlockStates(bStates)
 
-    def getSuccessors(self, vertexID, sim_flag=False):
+    def getSuccessors(self, vertexID, sim_Flag=False):
         """ 
         Get succesors from transition model
         """
@@ -167,20 +183,33 @@ class Graph:
         free_motion_count = 0
         total_transitions = 0
         # iterate through all actions and apply to parent state
+        
+        print("====== Getting Successors ======")
+        print(" Parent is vertex", vertexID)
+#        node.node_info()
+        
+        print("Successors")
         for action_type in range(self.numActions):
             simAction = parseActionDTheta(action_type, self.stepXY, self.stepTheta)
             # apply action
+#            sim_flag=True #False
             simRobotState, simBlkStates, count = transition_model(simState,
                                                            parentRobotState,
                                                            parentBlockStates,
                                                            simAction,
                                                            threshold=self.collisionThresh,
-                                                           sim_flag=sim_flag)
+                                                           sim_flag=sim_Flag)
             free_motion_count += count
             total_transitions += 1
             # convert back to graph state format
             graphRobotState, graphBlkStates = self.simStateToGraphState(simRobotState, simBlkStates)
             successors.append(self.addVertex(graphRobotState, graphBlkStates))
+            succ = self.getNode(self.addVertex(graphRobotState, graphBlkStates))
+            print("\tLooking at vertex", self.addVertex(graphRobotState, graphBlkStates))
+            print("Action is",action_type)
+#            succ.node_info()
+        print(successors)
+        print("================================")
         return successors, free_motion_count, total_transitions
 
     def diagDistance(self, node, targets):
@@ -225,6 +254,7 @@ class Graph:
                 d1 += node.robotState[1] > node.envState[blkId][1]
             node.h += d + d1
         elif self.heuristicAlg == 'sum':
+            h1 = 0; h2 = 0; h3 = 0
             # number of blocks x epsilon admissible
             # The maximum diagonal distance of any block to its nearest hole
             dx = np.abs(node.envState[:, 0:1] - np.transpose(self.holes[:, 0:1]))
@@ -235,29 +265,48 @@ class Graph:
             # to the nearest hole
             min_d8 = d8.min(axis=1)
             # the sum of each block to the goal
-            node.h = np.sum(min_d8)
+            h1 = np.sum(min_d8)
 
             # 2. kinematic heuristic
-            if node.h > 0:
+#            if h1 > 0:
+            if True:
                 blkId = np.argmax(min_d8)
-                node.h += np.sum(np.abs(node.envState[blkId] - node.robotState[:2]))
+                h2 = np.sum(np.abs(node.envState[blkId] - node.robotState[:2]))
+                
+                # 3. Distance from current pusher [x, y, theta] to ieal [x, y, theta] configuration
+                # ideal configuration is where the pusher is directly behind the bead w.r.t. the goal area, and is oriented in direction towards goal
+                print(node.envState[blkId])
+                print(node.robotState[:2])
+                print(np.abs(node.envState[blkId] - node.robotState[:2]))
+                print("robotState:",node.robotState)
+#                print("envState:",node.envState)
+                theta = math.atan2(node.envState[0][1], node.envState[0][0])*(180/math.pi)
+                if theta < 0:
+                    theta += 360
+                pusher_theta = theta - 90
+                if pusher_theta < 0:
+                    pusher_theta += 360
 
-                d1 = 0
-                if node.envState[blkId][0] > 0:
-                    d1 += node.robotState[0] < node.envState[blkId][0]
-                elif node.envState[blkId][0] < 0:
-                    d1 += node.robotState[0] > node.envState[blkId][0]
-                else:
-                    d1 += node.robotState[0] != node.envState[blkId][0]
+                ideal = np.zeros(3)
+                ideal[0] = node.envState[0][0] + np.sign(node.envState[0][0])	# ideal x
+                ideal[1] = node.envState[0][1] + np.sign(node.envState[0][1])	# ideal y
+                ideal[2] = pusher_theta/45
+                ideal = ideal.astype(np.int)
+                print("ideal:",ideal)
+                h3 = np.sum(np.abs(ideal - node.robotState))
+                h3 += 2*np.abs(ideal[2] - node.robotState[2])		# give more weight to angle difference than dx and dy
 
-                if node.envState[blkId][1] > 0:
-                    d1 += node.robotState[1] < node.envState[blkId][1]
-                elif node.envState[blkId][1] > 0:
-                    d1 += node.robotState[1] > node.envState[blkId][1]
-                else:
-                    d1 += node.robotState[1] != node.envState[blkId][1]
+                print(h3)
+                if(pusher_theta != node.robotState[2]*45):
+                    if((pusher_theta - node.robotState[2]*45)%7 == 0 and node.robotState[2] > 0):
+                        h3 -= 6
+                if(np.array_equal(np.array(ideal), np.array(node.robotState))):
+                    h3 = 1
+                print(h3)
 
-                node.h += d1
+#            node.h = h1 + h2
+            node.h = h3
+            print("h is", node.h)
         else:
             raise ValueError('Distance metric not supported: {}'.format(self.heuristicAlg))
 
