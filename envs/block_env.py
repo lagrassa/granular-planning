@@ -10,12 +10,15 @@ class Simulator:
     def __init__(self, workspace_size, goal_hole_width, gui=False, num_boxes = 2):
         if gui:
             self.physicsClient = p.connect(p.GUI)
+            ut.set_camera(90, -80, 1.95, target_position=np.zeros(3))
+            self.sleep_time = 0.001 #Time to sleep for visualization
         else:
             self.physicsClient = p.connect(p.DIRECT)
+            self.sleep_time = 0 # no reason to sleep if not visualizing
 
         self.workspace_size = workspace_size
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        p.setTimeStep(1/100.)
+        p.setTimeStep(1/120.)
         scaling = 10
         self.num_uses = 0
         self.box_width = 0.01*scaling
@@ -25,8 +28,8 @@ class Simulator:
         self.robot = p.loadURDF(os.path.join(urdf_folder, "paddle.urdf"))
         #self.boxes  = [ut.create_box(self.box_width, self.box_width, self.height, color = (1,0,0,1), mass = 5) for _ in range(num_boxes)]
         self.boxes  = [p.loadURDF(os.path.join(urdf_folder, "cyl.urdf")) for _ in range(num_boxes)]
-        self.mu = 0.1
-        self.restitution = 0.1
+        self.mu = 0.3
+        self.restitution = 0.92
         p.changeDynamics(self.robot, -1, restitution=self.restitution,linearDamping=1, lateralFriction=self.mu, jointDamping =0.01)
         [p.changeDynamics(box, -1, restitution=self.restitution, linearDamping = 0.99, angularDamping =0.99, lateralFriction=self.mu, jointDamping=0.01) for box in self.boxes]
         self.goal_hole_width=goal_hole_width
@@ -90,8 +93,18 @@ class Simulator:
             euler = ut.euler_from_quat(orn)
             if (euler[0] or euler[1] or euler[2]):
                 ipdb.set_trace()
-            
+        if self.penetrating_objects_exist():
+            return True
+        return False 
         #p.changeConstraint(self.cid, robot_pos, quat, maxForce=100)
+    def penetrating_objects_exist(self):
+        for box_id in self.boxes:
+            contact_pts = p.getClosestPoints(self.robot, box_id, 0.5)
+            for contact_pt in contact_pts:
+                if contact_pt[8] < -0.005:
+                    return True
+                    import ipdb; ipdb.set_trace()
+        return False
     def close(self):
         p.disconnect()
     def set_robot_blk_states(self, rState, bStates):
@@ -123,9 +136,9 @@ class Simulator:
         des_pos = (cur_q[0]+delta_x, cur_q[1]+delta_y)
         #des_quat = ut.quat_from_euler([0,0,cur_theta+delta_yaw])
         #p.changeConstraint(self.cid, des_pos, des_quat, maxForce=self.force)
-        duration = 1
+        duration = 0.8
         self.set_motors(des_pos, des_theta)
-        ut.simulate_for_duration(duration)
+        ut.simulate_for_duration(duration, sleep_time = self.sleep_time)
         if show_error:
             cur_q = ut.get_joint_positions(self.robot, (0,1,2))
             print("pos error:", np.linalg.norm(np.array(cur_q[:2])-np.array(des_pos)))

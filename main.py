@@ -9,6 +9,7 @@ from forward.state import State
 from forward.transition_models import *
 
 start = time.time()
+REPLAN = False
 
 def quantRobotState(robotState, xyStep, thetaStep):
     """Robot from continous simulator state to discrete graph state"""
@@ -16,7 +17,7 @@ def quantRobotState(robotState, xyStep, thetaStep):
     qs[:2] = np.round(robotState[:2] / xyStep)
     qs[2] = np.round(robotState[2] / thetaStep)
     # avoid negative heading index
-    qs[2] = qs[2] % ((np.pi + 1e-6) // thetaStep)
+    qs[2] = qs[2] % ((2 * np.pi + 1e-6) // thetaStep)
     return qs.astype(np.int)
 
 
@@ -40,9 +41,11 @@ def isGoalSim(blockStates, goalRect):
 
 def robotPosDiff(pos1, pos2):
     diff = pos1 - pos2
-    diff[2] = pos1[2] % np.pi - pos2[2] % np.pi
-    if diff[2] >= np.pi / 2:
-        diff[2] -= np.pi
+    diff[2] = pos1[2] % (2 * np.pi) - pos2[2] % (2 * np.pi)
+    if diff[2] >= np.pi:
+        diff[2] -= 2 * np.pi
+    if diff[2] <= -np.pi:
+        diff[2] += 2 * np.pi
     return diff
 
 
@@ -57,8 +60,8 @@ workspace_size = 5
 goal_size = 0.5
 
 plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
-robot_state = [0, 0.6, 0.0]
-box_states = [0.4, 0, 0, 0.4]
+robot_state = [0, 0.5, 0.0]
+box_states = [0.6, 0, 0, 0.6]
 state = np.hstack([robot_state, box_states])
 init_state = state.copy()
 plan_world.set_state(state)
@@ -100,7 +103,7 @@ while True:
     total_transitions += tt
     plan_world.close()
     world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
-    
+    # import ipdb; ipdb.set_trace() 
     if len(plan_actions) > 0:
         numPlans += 1
         print("Plan {} created: {}".format(numPlans, plan_actions))
@@ -110,38 +113,61 @@ while True:
         # ipdb.set_trace()
         for a, state in zip(plan_actions, plan_states):
             #world.set_state(curr_state)
+            # ipdb.set_trace()
             world.apply_action(a)
-            # print("Robot error:{}".format(np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3]))))
-            # print("Block error:{}".format(np.linalg.norm(world.get_state()[3:]-state[3:])))
+            print("Robot error:{}".format(np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3]))))
+            print("Block error:{}".format(np.linalg.norm(world.get_state()[3:]-state[3:])))
             quantRobotSim = quantRobotState(world.get_state()[:3], step_xy, step_theta)
             quantRobotPlan = quantRobotState(state[:3], step_xy, step_theta)
+
+            quantBlkSim = quantBlockStates(world.get_state()[3:], step_xy)
+            quantBlkPlan = quantBlockStates(state[3:], step_xy)
+
             # print("Robot state:{},{}vs{}".format(
             #         world.get_state()[:3], 
             #         quantRobotSim, 
             #         quantRobotPlan
             #         ))
 
-            if np.linalg.norm(quantRobotSim - quantRobotPlan) > 1e-6:
+            if REPLAN and np.linalg.norm(quantRobotSim - quantRobotPlan) > 1e-6:
+                print("Observe large robot pose error")
                 break
+
             print("Block state:{},{}vs{}".format(
                     world.get_state()[3:], 
                     quantBlockStates(world.get_state()[3:], step_xy),
                     quantBlockStates(state[3:], step_xy)
                     ))
+
+            if REPLAN and np.linalg.norm(quantBlkSim - quantBlkPlan) > 1e-6:
+                print("Observe large block pose error")
+                break
+
             curr_state = state
             time.sleep(0.2)
         for i in range(4):
             world.apply_action([0, 0]) #see if it falls
-        # ipdb.set_trace()
+
         if isGoalSim(world.get_state()[3:].reshape((-1, 2)), 
             [-goal_size/2, +goal_size/2, -goal_size/2, +goal_size/2]):
             print("Goal reached...")
+            # ipdb.set_trace()
             break
         else:
             print("Re-planning...{}".format(world.get_state()[:3]))
             init_state = np.copy(world.get_state())
-            init_state[2] %= np.pi
-            plan_world.set_state(init_state)
+            init_state[2] %= 2 * np.pi
+
+            if init_state[2] >= np.pi:
+                init_state[2] -= 2 * np.pi
+            if init_state[2] <= -np.pi:
+                init_state[2] += 2 * np.pi
+            world.close()
+            if REPLAN:
+                plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
+                plan_world.set_state(init_state)
+            else:
+                break
             
 print(f"Number of free space transitions: {free_motion_count} out of {total_transitions}")
 print(f"Total time taken: {time.time() - start:.5f}s")
