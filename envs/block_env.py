@@ -11,7 +11,7 @@ class Simulator:
         if gui:
             self.physicsClient = p.connect(p.GUI)
             ut.set_camera(90, -80, 1.95, target_position=np.zeros(3))
-            self.sleep_time = 0.001 #Time to sleep for visualization
+            self.sleep_time = 0.002 #Time to sleep for visualization
         else:
             self.physicsClient = p.connect(p.DIRECT)
             self.sleep_time = 0 # no reason to sleep if not visualizing
@@ -28,9 +28,9 @@ class Simulator:
         self.robot = p.loadURDF(os.path.join(urdf_folder, "paddle.urdf"))
         #self.boxes  = [ut.create_box(self.box_width, self.box_width, self.height, color = (1,0,0,1), mass = 5) for _ in range(num_boxes)]
         self.boxes  = [p.loadURDF(os.path.join(urdf_folder, "cyl.urdf")) for _ in range(num_boxes)]
-        self.mu = 0.3
-        self.restitution = 0.92
-        p.changeDynamics(self.robot, -1, restitution=self.restitution,linearDamping=1, lateralFriction=self.mu, jointDamping =0.01)
+        self.mu = 0.4
+        self.restitution = 0.2
+        p.changeDynamics(self.robot, -1, restitution=self.restitution,linearDamping=1, lateralFriction=self.mu, jointDamping =0.2)
         [p.changeDynamics(box, -1, restitution=self.restitution, linearDamping = 0.99, angularDamping =0.99, lateralFriction=self.mu, jointDamping=0.01) for box in self.boxes]
         self.goal_hole_width=goal_hole_width
         ut.enable_gravity()
@@ -41,7 +41,7 @@ class Simulator:
         self.force = 5.0#0.2
 
     def set_motors(self, robot_pos, theta):
-        maxVel = 1
+        maxVel = 0.5
         p.setJointMotorControl2(self.robot, 0, p.POSITION_CONTROL, robot_pos[0], maxVelocity=maxVel, force=self.force, targetVelocity=0) 
         p.setJointMotorControl2(self.robot, 1, p.POSITION_CONTROL, robot_pos[1], maxVelocity=maxVel, force=self.force, targetVelocity=0) 
         p.setJointMotorControl2(self.robot, 2, p.POSITION_CONTROL, theta, maxVelocity=maxVel, force=self.force, targetVelocity=0) 
@@ -103,7 +103,6 @@ class Simulator:
             for contact_pt in contact_pts:
                 if contact_pt[8] < -0.005:
                     return True
-                    import ipdb; ipdb.set_trace()
         return False
     def close(self):
         p.disconnect()
@@ -136,13 +135,13 @@ class Simulator:
         des_pos = (cur_q[0]+delta_x, cur_q[1]+delta_y)
         #des_quat = ut.quat_from_euler([0,0,cur_theta+delta_yaw])
         #p.changeConstraint(self.cid, des_pos, des_quat, maxForce=self.force)
-        duration = 0.8
+        duration = 1.6
         self.set_motors(des_pos, des_theta)
         ut.simulate_for_duration(duration, sleep_time = self.sleep_time)
-        if show_error:
+        if show_error and action[1] != 0:
             cur_q = ut.get_joint_positions(self.robot, (0,1,2))
-            print("pos error:", np.linalg.norm(np.array(cur_q[:2])-np.array(des_pos)))
-            print("angle error:", np.linalg.norm(cur_q[2]-des_theta))
+            #print("pos error:", np.linalg.norm(np.array(cur_q[:2])-np.array(des_pos)))
+            print("angle error:", np.linalg.norm(cur_q[2]-des_theta).round(5))
 
     def get_state(self):
         """

@@ -89,17 +89,19 @@ class Graph:
         simState = self.graphStateToSimState(node)
         coords = simState[1]
         is_goal_result = True
+        tol = -0.01
         for dim, goal_dim in zip([0,1], [self.w, self.h]):
-            if np.any((self.hole_center[dim]-goal_dim/2)>coords[:,dim]+self.cyl_radius):
+            if np.any((self.hole_center[dim]-goal_dim/2)>coords[:,dim]-(self.cyl_radius+tol)):
                 is_goal_result = False
-            if np.any((self.hole_center[dim]+goal_dim/2)<coords[:,dim]-self.cyl_radius):
+            if np.any((self.hole_center[dim]+goal_dim/2)<coords[:,dim]+(self.cyl_radius+tol)):
                 is_goal_result = False
 
 
         old_is_goal_result =  self.diagDistance(node, self.holes)[1] == 0
         if (old_is_goal_result != is_goal_result):
-            print("Different results between old and new result")
-            import ipdb; ipdb.set_trace()
+            pass
+            #print("Different results between old and new result")
+            #import ipdb; ipdb.set_trace()
         return is_goal_result
 
     def addVertex(self, robotState, envState):

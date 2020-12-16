@@ -108,7 +108,7 @@ while True:
         curr_state = init_state
         # ipdb.set_trace()
         for a, state in zip(plan_actions, plan_states):
-            #world.set_state(curr_state)
+            world.set_state(curr_state)
             # ipdb.set_trace()
             world.apply_action(a)
             print("Robot error:{}".format(np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3]))))
