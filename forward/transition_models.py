@@ -1,6 +1,7 @@
 import numpy as np
 
-def transition_model(state, robot_state, block_state, action, threshold=1e-3, sim_flag=False):
+def transition_model(state, robot_state, block_state, action,
+                     threshold=1e-3, sim_flag=False, steps=2):
     """
     Given current state and action return next state
     :param state: state.State object
@@ -13,20 +14,40 @@ def transition_model(state, robot_state, block_state, action, threshold=1e-3, si
         robot state: (x,y,theta) state of the robot as np.array
         object states: Nx2 array of the (x,y) states of the objects
     """
-    # set parent state
-    collision_detected = state.set_state(robot_state, block_state)
-    if collision_detected:
-        return False
-    # check whether to use simulator for dynamics
-    if not sim_flag:
-        status = state.is_free_space_motion(threshold=threshold)
-    else:
+    if sim_flag:
         state.use_simulator=True
+        is_free = 0 
+    else:
+        is_free = 1
+        # discretize action
+        action_steps = np.array(action) / steps
+        
+        # set parent state with free space transition model
+        state.use_simulator=False
+        state.set_state(robot_state, block_state)
+
+        # iterate over discretized actions
+        for i in range(steps):
+            state.apply_action(action_steps)
+
+            # check whether to use simulator for dynamics
+            if not (state.is_free_space_motion(threshold=threshold)):
+                is_free = 0
+                break
+        
+        # return state if simulator is not needed
+        if not state.use_simulator:
+            r, b = state.get_state()
+            return r, b, is_free
+
+    # set parent state
+    state.set_state(robot_state, block_state)
+
     # apply action
     state.apply_action(action)
 
-    # return successor
-    return state.get_state()
+    r, b = state.get_state()
+    return r, b, is_free
 
 
 def parseActionDTheta(action_type, stepXY, stepTheta):

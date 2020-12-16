@@ -13,6 +13,8 @@ def ComputePath(OPEN, graph):
     CLOSED = set()
     num_expanded = 0
     found_goal = False
+    free_motion_count = 0
+    total_transitions = 0
     while len(OPEN) > 0:
         vertexID = heapq.heappop(OPEN)[1]
         CLOSED.add(vertexID)
@@ -36,7 +38,9 @@ def ComputePath(OPEN, graph):
             plan.reverse()
             break
 
-        successors = graph.getSuccessors(vertexID)
+        successors, fm_count, tt = graph.getSuccessors(vertexID)
+        free_motion_count += fm_count
+        total_transitions += tt
         # ipdb.set_trace()
         if num_expanded % 200 == 0:
             print("Expanding:{}, g={}, h={}, f={}".format(S.robotState, S.g, S.h, S.f))
@@ -52,7 +56,7 @@ def ComputePath(OPEN, graph):
                     # print("New path", act, S.robotState, SNode.robotState)
                     heapq.heappush(OPEN, (SNode.f, s_prime))
     assert found_goal
-    return plan_actions, plan
+    return plan_actions, plan, free_motion_count, total_transitions
 
 
 def A_star(graph):
