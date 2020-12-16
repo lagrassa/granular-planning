@@ -153,7 +153,7 @@ class Graph:
         """
         return self.quantRobotState(rState), self.quantBlockStates(bStates)
 
-    def getSuccessors(self, vertexID):
+    def getSuccessors(self, vertexID, sim_flag=False):
         """ 
         Get succesors from transition model
         """
@@ -173,7 +173,7 @@ class Graph:
                                                            parentBlockStates,
                                                            simAction,
                                                            threshold=self.collisionThresh,
-                                                           sim_flag=False)
+                                                           sim_flag=sim_flag)
             free_motion_count += count
             total_transitions += 1
             # convert back to graph state format

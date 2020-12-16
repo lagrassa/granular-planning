@@ -1,7 +1,7 @@
 import numpy as np
 
 def transition_model(state, robot_state, block_state, action,
-                     threshold=1e-3, sim_flag=False, steps=5):
+                     threshold=1e-3, sim_flag=False, steps=2):
     """
     Given current state and action return next state
     :param state: state.State object
@@ -14,17 +14,18 @@ def transition_model(state, robot_state, block_state, action,
         robot state: (x,y,theta) state of the robot as np.array
         object states: Nx2 array of the (x,y) states of the objects
     """
-    is_free = 1
     if sim_flag:
         state.use_simulator=True
+        is_free = 0 
     else:
+        is_free = 1
         # discretize action
         action_steps = np.array(action) / steps
         
-        # set parent state
+        # set parent state with free space transition model
+        state.use_simulator=False
         state.set_state(robot_state, block_state)
 
-        state.use_simulator=False
         # iterate over discretized actions
         for i in range(steps):
             state.apply_action(action_steps)
@@ -33,7 +34,8 @@ def transition_model(state, robot_state, block_state, action,
             if not (state.is_free_space_motion(threshold=threshold)):
                 is_free = 0
                 break
-
+        
+        # return state if simulator is not needed
         if not state.use_simulator:
             r, b = state.get_state()
             return r, b, is_free
