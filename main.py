@@ -116,7 +116,7 @@ while True:
         for a, state in zip(plan_actions, plan_states):
             if TELEPORT:
                 world.set_state(curr_state)
-			# ipdb.set_trace()
+            # ipdb.set_trace()
             world.apply_action(a)
             print("Robot error:{}".format(np.linalg.norm(robotPosDiff(world.get_state()[:3], state[:3]))))
             print("Block error:{}".format(np.linalg.norm(world.get_state()[3:]-state[3:])))
