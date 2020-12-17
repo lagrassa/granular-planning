@@ -21,7 +21,7 @@ class Node:
         self.envState = envState
         self.parentId = -1
         self.parentActionId = -1
-        self.weight = 5#100.0
+        self.weight = 1#100.0
 
     @property
     def f(self):
@@ -264,8 +264,8 @@ class Graph:
                 if((pusher_theta - node.robotState[2]*45)%7 == 0 and node.robotState[2] > 0):
                     h3_theta -= 6
 
-            node.h = h1 + h2 + (h3x + h3y)				# H without h3_theta
-#            node.h = h1 + h2 + (h3x + h3y + h3_theta)
+#            node.h = h1 + h2 + (h3x + h3y)				# H without h3_theta
+            node.h = h1 + h2 + (h3x + h3y + h3_theta)
         else:
             raise ValueError('Distance metric not supported: {}'.format(self.heuristicAlg))
 
