@@ -23,7 +23,7 @@ def ComputePath(OPEN, graph):
         num_expanded +=1
         # Extract S with smallest f from OPEN
         if graph.isGoal(S):    # Create function to compare two instances of class Node
-            print("Find Goal!!!")
+            print("\nFound Goal!!!")
             found_goal = True
             while S.parentId!= -1:
                 Sparent = graph.getNode(S.parentId)

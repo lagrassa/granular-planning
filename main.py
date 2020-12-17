@@ -59,9 +59,10 @@ def robotPosDiff(pos1, pos2):
 workspace_size = 5
 goal_size = 0.5
 
-plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
 robot_state = [0, 0.5, 0.0]
 box_states = [0.6, 0, 0, 0.6]
+numblocks = 2
+plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = numblocks)
 state = np.hstack([robot_state, box_states])
 init_state = state.copy()
 plan_world.set_state(state)
@@ -96,13 +97,13 @@ while True:
     print("Robot:{}, blk:{}".format(rState, bStates))
     g.addVertex(rState, bStates)
     g.getNode(0).g = 0
-
+    
     # A star
     plan_actions, plan_states, fm_count, tt = astar.A_star(g)
     free_motion_count += fm_count
     total_transitions += tt
     plan_world.close()
-    world = Simulator(workspace_size, goal_size, gui=True, num_boxes = 2)
+    world = Simulator(workspace_size, goal_size, gui=True, num_boxes = numblocks)
     # import ipdb; ipdb.set_trace() 
     if len(plan_actions) > 0:
         numPlans += 1
@@ -164,7 +165,7 @@ while True:
                 init_state[2] += 2 * np.pi
             world.close()
             if REPLAN:
-                plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = 2)
+                plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = numblocks)
                 plan_world.set_state(init_state)
             else:
                 break

@@ -1,5 +1,6 @@
 import numpy as np
 import ipdb
+import math
 
 from .transition_models import parseAction, transition_model, parseActionDTheta
 from .state import State
@@ -89,7 +90,7 @@ class Graph:
         simState = self.graphStateToSimState(node)
         coords = simState[1]
         is_goal_result = True
-        tol = -0.01
+        tol = 0.01
         for dim, goal_dim in zip([0,1], [self.w, self.h]):
             if np.any((self.hole_center[dim]-goal_dim/2)>coords[:,dim]-(self.cyl_radius+tol)):
                 is_goal_result = False
@@ -225,6 +226,7 @@ class Graph:
                 d1 += node.robotState[1] > node.envState[blkId][1]
             node.h += d + d1
         elif self.heuristicAlg == 'sum':
+            h1 = 0; h2 = 0; h3 = 0
             # number of blocks x epsilon admissible
             # The maximum diagonal distance of any block to its nearest hole
             dx = np.abs(node.envState[:, 0:1] - np.transpose(self.holes[:, 0:1]))
@@ -235,29 +237,35 @@ class Graph:
             # to the nearest hole
             min_d8 = d8.min(axis=1)
             # the sum of each block to the goal
-            node.h = np.sum(min_d8)
+            h1 = np.sum(min_d8)
 
             # 2. kinematic heuristic
-            if node.h > 0:
-                blkId = np.argmax(min_d8)
-                node.h += np.sum(np.abs(node.envState[blkId] - node.robotState[:2]))
+            blkId = np.argmax(min_d8)
+            h2 = np.sum(np.abs(node.envState[blkId] - node.robotState[:2]))
+                
+            # 3. Distance from current pusher [x, y, theta] to ieal [x, y, theta] configuration
+            # ideal configuration is where the pusher is directly behind the bead w.r.t. the goal area, and is oriented in direction towards goal
+            theta = math.atan2(node.envState[0][1], node.envState[0][0])*(180/math.pi)
+            if theta < 0:
+               theta += 360
+            pusher_theta = theta - 90
+            if pusher_theta < 0:
+                pusher_theta += 360
+            idealx = node.envState[0][0] + np.sign(node.envState[0][0])	# ideal x
+            idealy = node.envState[0][1] + np.sign(node.envState[0][1])	# ideal y
+            ideal_theta = pusher_theta/45
+            idealx = int(idealx)
+            idealy = int(idealy)
+            ideal_theta = int(ideal_theta)
+            h3x = np.abs(idealx - node.robotState[0])
+            h3y = np.abs(idealy - node.robotState[1])
+            h3_theta = np.abs(ideal_theta - node.robotState[2])
+            if(pusher_theta != node.robotState[2]*45):
+                if((pusher_theta - node.robotState[2]*45)%7 == 0 and node.robotState[2] > 0):
+                    h3_theta -= 6
 
-                d1 = 0
-                if node.envState[blkId][0] > 0:
-                    d1 += node.robotState[0] < node.envState[blkId][0]
-                elif node.envState[blkId][0] < 0:
-                    d1 += node.robotState[0] > node.envState[blkId][0]
-                else:
-                    d1 += node.robotState[0] != node.envState[blkId][0]
-
-                if node.envState[blkId][1] > 0:
-                    d1 += node.robotState[1] < node.envState[blkId][1]
-                elif node.envState[blkId][1] > 0:
-                    d1 += node.robotState[1] > node.envState[blkId][1]
-                else:
-                    d1 += node.robotState[1] != node.envState[blkId][1]
-
-                node.h += d1
+            node.h = h1 + h2 + (h3x + h3y)				# H without h3_theta
+#            node.h = h1 + h2 + (h3x + h3y + h3_theta)
         else:
             raise ValueError('Distance metric not supported: {}'.format(self.heuristicAlg))
 
