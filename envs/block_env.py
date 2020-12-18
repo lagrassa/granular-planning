@@ -52,10 +52,11 @@ class Simulator:
         #self.plane = p.loadURDF("plane.urdf", [0,0,0])
         plane_height = self.plane_height
         side_box_width = (workspace_size-self.goal_hole_width)/2
-        left_box = ut.create_box(workspace_size, (workspace_size-self.goal_hole_width)/2,  plane_height)
-        right_box = ut.create_box(workspace_size, (workspace_size-self.goal_hole_width)/2,  plane_height)
-        top_box = ut.create_box((workspace_size-self.goal_hole_width)/2,self.goal_hole_width, plane_height)
-        bottom_box = ut.create_box((workspace_size-self.goal_hole_width)/2,self.goal_hole_width, plane_height)
+        rgba = (0.4, 0.1, 0.9, 1)
+        left_box = ut.create_box(workspace_size, (workspace_size-self.goal_hole_width)/2,  plane_height, color=rgba)
+        right_box = ut.create_box(workspace_size, (workspace_size-self.goal_hole_width)/2,  plane_height, color=rgba)
+        top_box = ut.create_box((workspace_size-self.goal_hole_width)/2,self.goal_hole_width, plane_height, color=rgba)
+        bottom_box = ut.create_box((workspace_size-self.goal_hole_width)/2,self.goal_hole_width, plane_height, color=rgba)
         
         center_distance_sides = 0.5*(side_box_width+self.goal_hole_width)
         ut.set_point(left_box, (0, center_distance_sides, -plane_height/2))
@@ -167,13 +168,16 @@ class Simulator:
 
 
 if __name__ == "__main__":
-    world = Simulator(1.5, 0.3, gui=True, num_boxes = 2)
-    robot_state  = [0.0,-0.37,0.05]
-    box_states  = [0.2,0.2,0,0.3]
+    world = Simulator(1.5, 0.3, gui=True, num_boxes = 5)
+    robot_state  = [-.3,-0.1,1.57]
+    box_states  = [0, 0.25, -0.14, 0.25, 0.14, 0.27, 0, -0.25, -0.14, -0.25]
     state = np.hstack([robot_state,box_states])
+    world.set_state(state)
+    input("look okay?")
+    """
+    return
     test_state = [ 0.        ,  0.3       ,  2.35619449,  0.2       , -0.1       ,
         0.        ,  0.        ]
-    world.set_state(test_state)
     import ipdb; ipdb.set_trace()
     obs = world.get_state()
     assert(np.allclose(state, obs))
@@ -188,5 +192,6 @@ if __name__ == "__main__":
     world.set_state(state)
     import ipdb; ipdb.set_trace()
     world.apply_action([0,0.1])
+    """
 
 

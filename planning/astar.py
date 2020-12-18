@@ -38,7 +38,8 @@ def ComputePath(OPEN, graph):
             plan_actions.reverse()
             plan.reverse()
             break
-
+        if S in CLOSED:
+            print("already closed node")
         successors, fm_count, tt = graph.getSuccessors(vertexID)
         free_motion_count += fm_count
         total_transitions += tt

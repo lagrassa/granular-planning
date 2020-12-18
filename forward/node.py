@@ -21,7 +21,7 @@ class Node:
         self.envState = envState
         self.parentId = -1
         self.parentActionId = -1
-        self.weight = 1#100.0
+        self.weight = 5#100.0
 
     @property
     def f(self):
@@ -84,18 +84,23 @@ class Graph:
         simState = self.graphStateToSimState(node)
         self.world.set_state(simState)
         input("Visualize world, OK?")
+        self.world.set_state(old_state)
 
     def isGoal(self, node):
         """Reach the goal when all blocks are in the holes"""
         simState = self.graphStateToSimState(node)
         coords = simState[1]
         is_goal_result = True
-        tol = 0.01
+        tol = 0.00#0.005
+        print(coords)
+        #import ipdb; ipdb.set_trace()
         for dim, goal_dim in zip([0,1], [self.w, self.h]):
-            if np.any((self.hole_center[dim]-goal_dim/2)>coords[:,dim]-(self.cyl_radius+tol)):
+            distances_per_dim = np.abs(self.hole_center[dim]-coords[:,dim])
+            max_distance = goal_dim/2. - (self.cyl_radius+tol)
+            if np.any(distances_per_dim> max_distance):
                 is_goal_result = False
-            if np.any((self.hole_center[dim]+goal_dim/2)<coords[:,dim]+(self.cyl_radius+tol)):
-                is_goal_result = False
+            #if np.any((self.hole_center[dim]+goal_dim/2)<coords[:,dim]+(self.cyl_radiusV+tol)):
+            #    is_goal_result = False
 
 
         old_is_goal_result =  self.diagDistance(node, self.holes)[1] == 0

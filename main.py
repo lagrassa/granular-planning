@@ -82,6 +82,9 @@ else:
     box_states = [0.4, -0.2, 0.4, -0.4, 0.2, -0.4]
     numblocks = 3
 plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = numblocks)
+
+	numblocks = 4
+	plan_world = Simulator(workspace_size, goal_size, gui=True, num_boxes = numblocks)
 state = np.hstack([robot_state, box_states])
 init_state = state.copy()
 plan_world.set_state(state)
@@ -123,9 +126,11 @@ while True:
     free_motion_count += fm_count
     total_transitions += tt
     plan_world.close()
+    import ipdb; ipdb.set_trace()
     world = Simulator(workspace_size, goal_size, gui=True, num_boxes = numblocks)
     # import ipdb; ipdb.set_trace()
     if len(plan_actions) > 0:
+        import ipdb; ipdb.set_trace() 
         numPlans += 1
         print("Plan {} created: {}".format(numPlans, plan_actions))
         world.set_state(init_state)
