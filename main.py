@@ -81,10 +81,8 @@ else:
     robot_state = [0, 0.8, 0.0]
     box_states = [0.4, -0.2, 0.4, -0.4, 0.2, -0.4]
     numblocks = 3
-plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = numblocks)
-
-	numblocks = 4
-	plan_world = Simulator(workspace_size, goal_size, gui=True, num_boxes = numblocks)
+#	numblocks = 4
+#	plan_world = Simulator(workspace_size, goal_size, gui=True, num_boxes = numblocks)
 state = np.hstack([robot_state, box_states])
 init_state = state.copy()
 plan_world.set_state(state)
