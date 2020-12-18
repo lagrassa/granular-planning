@@ -2,6 +2,7 @@ import ipdb
 import numpy as np
 import time
 import planning.astar as astar
+import random
 
 from envs.block_env import Simulator
 from forward.node import Node, Graph
@@ -10,7 +11,8 @@ from forward.transition_models import *
 
 start = time.time()
 REPLAN = False
-TELEPORT = False
+TELEPORT = True# False
+RANDOM = False
 
 def quantRobotState(robotState, xyStep, thetaStep):
     """Robot from continous simulator state to discrete graph state"""
@@ -60,9 +62,25 @@ def robotPosDiff(pos1, pos2):
 workspace_size = 5
 goal_size = 0.5
 
-robot_state = [0, 0.5, 0.0]
-box_states = [0.6, 0, 0, 0.6]
-numblocks = 2
+if RANDOM:
+    numblocks = 2
+    robot_terms = 3
+    block_terms = numblocks*2
+    robot_state = []
+    box_states = []
+    for i in range(0, robot_terms+block_terms):
+        x = round(random.uniform(0, 2) - 1, 1)
+        if i < robot_terms:
+            if i == 2:
+                robot_state.append(round(random.uniform(0, 7)))
+            else:
+                robot_state.append(x)
+        else:
+            box_states.append(x)
+else:
+    robot_state = [0, 0.8, 0.0]
+    box_states = [0.4, -0.2, 0.4, -0.4, 0.2, -0.4]
+    numblocks = 3
 plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = numblocks)
 state = np.hstack([robot_state, box_states])
 init_state = state.copy()
@@ -98,14 +116,15 @@ while True:
     print("Robot:{}, blk:{}".format(rState, bStates))
     g.addVertex(rState, bStates)
     g.getNode(0).g = 0
-    
+
     # A star
     plan_actions, plan_states, fm_count, tt = astar.A_star(g)
+    print(f"Total time taken for planning: {time.time() - start:.5f}sec\n")
     free_motion_count += fm_count
     total_transitions += tt
     plan_world.close()
     world = Simulator(workspace_size, goal_size, gui=True, num_boxes = numblocks)
-    # import ipdb; ipdb.set_trace() 
+    # import ipdb; ipdb.set_trace()
     if len(plan_actions) > 0:
         numPlans += 1
         print("Plan {} created: {}".format(numPlans, plan_actions))
@@ -127,8 +146,8 @@ while True:
             quantBlkPlan = quantBlockStates(state[3:], step_xy)
 
             # print("Robot state:{},{}vs{}".format(
-            #         world.get_state()[:3], 
-            #         quantRobotSim, 
+            #         world.get_state()[:3],
+            #         quantRobotSim,
             #         quantRobotPlan
             #         ))
 
@@ -137,7 +156,7 @@ while True:
                 break
 
             print("Block state:{},{}vs{}".format(
-                    world.get_state()[3:], 
+                    world.get_state()[3:],
                     quantBlockStates(world.get_state()[3:], step_xy),
                     quantBlockStates(state[3:], step_xy)
                     ))
@@ -147,11 +166,11 @@ while True:
                 break
 
             curr_state = state
-            time.sleep(0.2)
+#            time.sleep(0.2)
         for i in range(4):
             world.apply_action([0, 0]) #see if it falls
 
-        if isGoalSim(world.get_state()[3:].reshape((-1, 2)), 
+        if isGoalSim(world.get_state()[3:].reshape((-1, 2)),
             [-goal_size/2, +goal_size/2, -goal_size/2, +goal_size/2]):
             print("Goal reached...")
             # ipdb.set_trace()
@@ -171,6 +190,5 @@ while True:
                 plan_world.set_state(init_state)
             else:
                 break
-            
+
 print(f"Number of free space transitions: {free_motion_count} out of {total_transitions}")
-print(f"Total time taken: {time.time() - start:.5f}s")

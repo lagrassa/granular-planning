@@ -25,7 +25,7 @@ class Node:
 
     @property
     def f(self):
-        return self.weight * self.h + self.g
+        return (self.weight * self.h) + self.g
 
     def convexHull(self):
         """ Return the convex hull of blocks' centroids if points are not colinear. Otherwise,
@@ -231,41 +231,19 @@ class Graph:
             # The maximum diagonal distance of any block to its nearest hole
             dx = np.abs(node.envState[:, 0:1] - np.transpose(self.holes[:, 0:1]))
             dy = np.abs(node.envState[:, 1:2] - np.transpose(self.holes[:, 1:2]))
-            
+
             # 1. diagonal distance heuristic
-            d8 = np.maximum(dx, dy)
-            # to the nearest hole
-            min_d8 = d8.min(axis=1)
-            # the sum of each block to the goal
-            h1 = np.sum(min_d8)
+            for i in range(0, len(node.envState)):
+                h1 += min(dx[i])
+                h1 += min(dy[i])
 
             # 2. kinematic heuristic
+            d8 = np.minimum(dx, dy)
+            min_d8 = d8.min(axis=1)
             blkId = np.argmax(min_d8)
             h2 = np.sum(np.abs(node.envState[blkId] - node.robotState[:2]))
-                
-            # 3. Distance from current pusher [x, y, theta] to ieal [x, y, theta] configuration
-            # ideal configuration is where the pusher is directly behind the bead w.r.t. the goal area, and is oriented in direction towards goal
-            theta = math.atan2(node.envState[0][1], node.envState[0][0])*(180/math.pi)
-            if theta < 0:
-               theta += 360
-            pusher_theta = theta - 90
-            if pusher_theta < 0:
-                pusher_theta += 360
-            idealx = node.envState[0][0] + np.sign(node.envState[0][0])	# ideal x
-            idealy = node.envState[0][1] + np.sign(node.envState[0][1])	# ideal y
-            ideal_theta = pusher_theta/45
-            idealx = int(idealx)
-            idealy = int(idealy)
-            ideal_theta = int(ideal_theta)
-            h3x = np.abs(idealx - node.robotState[0])
-            h3y = np.abs(idealy - node.robotState[1])
-            h3_theta = np.abs(ideal_theta - node.robotState[2])
-            if(pusher_theta != node.robotState[2]*45):
-                if((pusher_theta - node.robotState[2]*45)%7 == 0 and node.robotState[2] > 0):
-                    h3_theta -= 6
 
-#            node.h = h1 + h2 + (h3x + h3y)				# H without h3_theta
-            node.h = h1 + h2 + (h3x + h3y + h3_theta)
+            node.h = h1 + h2
         else:
             raise ValueError('Distance metric not supported: {}'.format(self.heuristicAlg))
 

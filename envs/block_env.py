@@ -11,7 +11,7 @@ class Simulator:
         if gui:
             self.physicsClient = p.connect(p.GUI)
             ut.set_camera(90, -80, 1.95, target_position=np.zeros(3))
-            self.sleep_time = 0.002 #Time to sleep for visualization
+            self.sleep_time = 0.0002#2 #Time to sleep for visualization
         else:
             self.physicsClient = p.connect(p.DIRECT)
             self.sleep_time = 0 # no reason to sleep if not visualizing

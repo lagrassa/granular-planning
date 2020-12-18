@@ -34,6 +34,7 @@ def ComputePath(OPEN, graph):
                 robot_state, block_states = graph.graphStateToSimState(S)
                 plan.append(np.hstack([robot_state, block_states.flatten()]))
                 S = Sparent
+            print("Number of moves:",len(plan_actions))
             plan_actions.reverse()
             plan.reverse()
             break
