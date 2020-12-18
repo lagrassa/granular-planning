@@ -60,10 +60,13 @@ def robotPosDiff(pos1, pos2):
 workspace_size = 5
 goal_size = 0.5
 
-robot_state = [0, 0.5, 0.0]
-box_states = [0.6, 0, 0, 0.6]
-numblocks = 2
-plan_world = Simulator(workspace_size, goal_size, gui=False, num_boxes = numblocks)
+robot_state = [0, 0.8, 0.0]
+box_states = [0.3, 0, 0, 0.3, 0.05, 0.25]
+robot_state  = [-.3,-0.1,1.57]
+box_states  = [0, 0.255, -0.14, 0.255, 0.14, 0.27, 0, -0.255]
+
+numblocks = 4
+plan_world = Simulator(workspace_size, goal_size, gui=True, num_boxes = numblocks)
 state = np.hstack([robot_state, box_states])
 init_state = state.copy()
 plan_world.set_state(state)
@@ -104,9 +107,10 @@ while True:
     free_motion_count += fm_count
     total_transitions += tt
     plan_world.close()
+    import ipdb; ipdb.set_trace()
     world = Simulator(workspace_size, goal_size, gui=True, num_boxes = numblocks)
-    # import ipdb; ipdb.set_trace() 
     if len(plan_actions) > 0:
+        import ipdb; ipdb.set_trace() 
         numPlans += 1
         print("Plan {} created: {}".format(numPlans, plan_actions))
         world.set_state(init_state)
